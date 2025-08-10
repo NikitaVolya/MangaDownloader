@@ -11,8 +11,10 @@ It was created to simplify and speed up the preparation process for manga locali
 
    ✅ Example:  
    https://bato.si/title/125589-the-fragrant-flower-blooms-with-dignity-official-simulpub
+   
    ❌ Avoid links with extra parameters:  
    https://bato.si/title/125589-the-fragrant-flower-blooms-with-dignity-official-simulpub?start=1#chapters
+
 
 2. **Select a save location** (folder path).
 

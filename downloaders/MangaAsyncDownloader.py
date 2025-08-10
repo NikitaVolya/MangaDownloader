@@ -99,7 +99,7 @@ class MangaAsyncDownloader:
                            if counter is not None and DownloadMode.MARK_NUMERATION in download_mode
                            else "") + pageTitle
 
-        files: list[str] = []
+        files_in_folder: list[str] = []
 
         os.makedirs(f"{path}/{folderName}", exist_ok=True)
 
@@ -108,21 +108,23 @@ class MangaAsyncDownloader:
             resp = await MangaAsyncDownloader.__client.get(current_link)
             img_data = resp.content
 
-            with open(f'{path}/{folderName}/{i}.jpg', 'wb') as handler:
+            image_path = f'{path}/{folderName}/{i}.jpg'
+
+            with open(image_path, 'wb') as handler:
                 handler.write(img_data)
-                files.append(f'{i}.jpg')
+                files_in_folder.append(f'{i}.jpg')
 
             if DownloadMode.SAVE_PSD in download_mode:
                 Convertor.SavePageAsPSD(
-                    f'{path}/{folderName}/{i}.jpg',
+                    image_path,
                     f'{path}/{folderName}/{i}.psd'
                 )
-                files.append(f'{i}.psd')
+                files_in_folder.append(f'{i}.psd')
 
 
             if not DownloadMode.SAVE_PICTURES in download_mode:
-                os.remove(f'{path}/{folderName}/{i}.jpg')
-                files.remove(f'{i}.jpg')
+                os.remove(image_path)
+                files_in_folder.remove(f'{i}.jpg')
 
         if counter:
             counter + 1
@@ -134,17 +136,16 @@ class MangaAsyncDownloader:
                 os.chdir(f"{path}/{folderName}")
                 patoolib.create_archive(
                     f"{cwd}\\{path}\\{folderName}.rar",
-                    tuple(files),
+                    tuple(files_in_folder),
 
                 )
             finally:
                 os.chdir(cwd)
 
         if not DownloadMode.SAVE_TO_FOLDER in download_mode:
-            for f in files:
+            for f in files_in_folder:
                 os.remove(f'{path}/{folderName}/{f}')
             os.removedirs(f'{path}/{folderName}')
-            return
 
 
     async def SaveAllChapters(
