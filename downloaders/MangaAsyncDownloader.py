@@ -1,19 +1,51 @@
 
-import os, patoolib
+import os
 
+from downloaders.strategies import ArchiveStrategy, DeletePicturesStrategy, SavePSDStrategy, DeleteFolderStrategy
+from entity import MangaChapter
 from outils import Convertor, MangaParser, Counter
 from enums import DownloadMode
 
-import httpx
+import httpx, asyncio
 
 
 class MangaAsyncDownloader:
 
-    __client = httpx.AsyncClient()
+    __client = httpx.AsyncClient(timeout=30.0)
 
     def __init__(self):
 
         self.__is_working = False
+
+        self.__max_concurrent = 3
+
+        self.__download_mode = DownloadMode.STANDARD
+        self.__strategies = []
+
+        self.OnUpdate = None
+
+    @property
+    def DownloadMode(self):
+        return self.__download_mode
+
+    @DownloadMode.setter
+    def DownloadMode(self, value: DownloadMode):
+        assert isinstance(value, DownloadMode)
+        self.__download_mode = value
+
+        self.__strategies = []
+
+        if DownloadMode.SAVE_PSD in self.__download_mode:
+            self.__strategies.append(SavePSDStrategy())
+
+        if not DownloadMode.SAVE_PICTURES in self.__download_mode:
+            self.__strategies.append(DeletePicturesStrategy())
+
+        if DownloadMode.SAVE_TO_ARCHIVE in self.__download_mode:
+            self.__strategies.append(ArchiveStrategy())
+
+        if not DownloadMode.SAVE_TO_FOLDER in self.__download_mode:
+            self.__strategies.append(DeleteFolderStrategy())
 
     @property
     def IsWorking(self):
@@ -44,62 +76,47 @@ class MangaAsyncDownloader:
         return MangaParser.ParsePagesLinks(str(resp.content))
 
     @staticmethod
-    async def __GetChaptersLinksAsync(link) -> list[str] or None:
+    async def GetChapters(link: str) -> list[MangaChapter] or None:
         resp = await MangaAsyncDownloader.__client.get(link)
         if resp.status_code != 200:
             return None
-        return MangaParser.ParseChaptersLinks(str(resp.content))
+        return MangaParser.ParseChapters(str(resp.content))
 
     @staticmethod
-    async def GetAllChaptersLinksAsync(link) -> list[str] or None:
-        chapters_links = set()
-        previous_page = None
+    async def GetAllChapters(link) -> list[MangaChapter] or None:
+        chapters = []
+        previous_chapters = None
+
+        resp = await MangaAsyncDownloader.__client.get(link)
+        if resp.status_code != 200:
+            return None
+
         i: int = 1
         while True:
-
             current_link = link + "?start=" + str(i)
-            current_page = await MangaAsyncDownloader.__GetChaptersLinksAsync(current_link)
-            if current_page is None or previous_page == current_page:
+            current_chapters = await MangaAsyncDownloader.GetChapters(current_link)
+
+            if current_chapters is None or previous_chapters == current_chapters:
                 break
 
-            for new_chapter_link in current_page:
-                chapters_links.add(new_chapter_link)
+            chapters += current_chapters
 
-            previous_page = current_page
+            previous_chapters = current_chapters
             i += 100
 
-        output = list(chapters_links)
-        output.sort(key=lambda link: link.split("/")[-1])
+        return chapters
 
-        return output
+    async def SaveChapterAsync(self, chapter: MangaChapter, path: str) -> None:
 
-    @staticmethod
-    async def GetChaptersNumber(link) -> int or None:
-        chapters = await MangaAsyncDownloader.GetAllChaptersLinksAsync(link)
-        if chapters is None:
-            return 0
-        return len(chapters)
+        if not self.__is_working:
+            return
 
-    @staticmethod
-    async def __SavePagesAsync(
-            link: str,
-            path: str,
-            download_mode: DownloadMode,
-            counter: Counter
-        ) -> None:
-
-        pagesLinks: list[str] = await MangaAsyncDownloader.__GetPagesLinksAsync(link)
+        pagesLinks: list[str] = await MangaAsyncDownloader.__GetPagesLinksAsync(chapter.Href)
         if pagesLinks is None:
             print("No pages found")
             return
 
-        pageTitle: str = await MangaAsyncDownloader.GetTitleAsync(link)
-
-        folderName: str = (str(counter.Value) + " - "
-                           if counter is not None and DownloadMode.MARK_NUMERATION in download_mode
-                           else "") + pageTitle
-
-        files_in_folder: list[str] = []
+        folderName: str = Convertor.ToSave(chapter.Title)
 
         os.makedirs(f"{path}/{folderName}", exist_ok=True)
 
@@ -108,85 +125,43 @@ class MangaAsyncDownloader:
             resp = await MangaAsyncDownloader.__client.get(current_link)
             img_data = resp.content
 
-            image_path = f'{path}/{folderName}/{i}.jpg'
+            image_path = f'{path}/{folderName}/{i + 1}.jpg'
 
             with open(image_path, 'wb') as handler:
                 handler.write(img_data)
-                files_in_folder.append(f'{i}.jpg')
 
-            if DownloadMode.SAVE_PSD in download_mode:
-                Convertor.SavePageAsPSD(
-                    image_path,
-                    f'{path}/{folderName}/{i}.psd'
-                )
-                files_in_folder.append(f'{i}.psd')
+        for strategy in self.__strategies:
+            strategy.Execute(f"{path}/{folderName}")
 
-
-            if not DownloadMode.SAVE_PICTURES in download_mode:
-                os.remove(image_path)
-                files_in_folder.remove(f'{i}.jpg')
-
-        if counter:
-            counter + 1
-
-        if DownloadMode.SAVE_TO_ARCHIVE in download_mode:
-
-            cwd = os.getcwd()
-            try:
-                os.chdir(f"{path}/{folderName}")
-                patoolib.create_archive(
-                    f"{cwd}\\{path}\\{folderName}.rar",
-                    tuple(files_in_folder),
-
-                )
-            finally:
-                os.chdir(cwd)
-
-        if not DownloadMode.SAVE_TO_FOLDER in download_mode:
-            for f in files_in_folder:
-                os.remove(f'{path}/{folderName}/{f}')
-            os.removedirs(f'{path}/{folderName}')
-
-
-    async def SaveAllChapters(
-                     self,
-                     link: str,
-                     path: str = "download",
-                     download_mode = DownloadMode.STANDARD,
-                     start_counter: int = 0,
-                     on_update = None
-                     ) -> None:
+    async def SaveAllChapters(self, link: str, path: str = "download") -> None:
 
         if self.__is_working:
             raise "Manga downloader is already working"
 
         self.__is_working = True
 
-        title = await MangaAsyncDownloader.GetTitleAsync(link)
+        title = Convertor.ToSave(await MangaAsyncDownloader.GetTitleAsync(link))
         os.makedirs(f"{path}/{title}", exist_ok=True)
 
-        counter = Counter(start_counter)
+        chapters: list[MangaChapter] = await MangaAsyncDownloader.GetAllChapters(link)
 
-        chapters = await MangaAsyncDownloader.GetAllChaptersLinksAsync(link)
+        semaphore = asyncio.Semaphore(self.__max_concurrent)
 
-        for chapter in chapters:
+        async def limited_save(chapter):
+            async with semaphore:
+                while True:
+                    print("Starting chapter:", chapter.Href)
+                    try:
+                        await self.SaveChapterAsync(chapter, f"{path}/{title}")
+                    except Exception as e:
+                        print("Error chapter", chapter.Href, "Error:", e)
+                        print("Retrying...", chapter.Href)
+                        continue
+                    break
+                self.OnUpdate()
 
-            if not self.__is_working:
-                return
+        tasks = [limited_save(ch) for ch in chapters]
+        await asyncio.gather(*tasks)
 
-            current_link = "https://bato.si" + chapter
-            print("Starting chapter: " + current_link)
-            try:
-                await MangaAsyncDownloader.__SavePagesAsync(
-                    current_link,
-                    f"{path}/{title}",
-                    download_mode,
-                    counter
-                )
-            except Exception as e:
-                print("Error chapter", current_link, "Error:", e)
-
-            if on_update:
-                on_update()
 
         self.__is_working = False

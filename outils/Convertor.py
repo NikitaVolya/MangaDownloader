@@ -11,7 +11,7 @@ class Convertor:
 
 
     @staticmethod
-    def SavePageAsPSD(image_path: str, output_path: str):
+    def SaveAsPSD(image_path: str, output_path: str):
 
         img = PILImage.open(image_path).convert('RGBA')
         arr = np.array(img)
@@ -51,3 +51,7 @@ class Convertor:
 
         with open(output_path, 'wb') as f:
             psd.write(f)
+
+    @staticmethod
+    def ToSave(value: str) -> str:
+        return "".join([c for c in value if c.isalpha() or c == " " or c.isdigit()])

@@ -1,5 +1,8 @@
 
 import re
+from bs4 import BeautifulSoup
+from entity import MangaChapter
+
 
 class MangaParser:
 
@@ -38,3 +41,15 @@ class MangaParser:
         )
 
         return list(set(mangaChapters))
+
+    @staticmethod
+    def ParseChapters(content: str) -> list[MangaChapter] or None:
+
+        soup = BeautifulSoup(content, "html.parser")
+        chapters_list = soup.find("div", {"data-name": "chapter-list"})
+
+        rep = []
+        for chapter in chapters_list.find_all("a", {"class": "link-hover"})[::2]:
+            rep.append(MangaChapter(chapter["href"], chapter.text))
+        rep.reverse()
+        return rep

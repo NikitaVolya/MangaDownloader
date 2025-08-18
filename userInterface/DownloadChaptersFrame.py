@@ -75,21 +75,18 @@ class DownloadChaptersFrame(Frame):
         self.__progressBar.pack(fill=X, padx=10, pady=5)
 
 
-    def __StartDownload(self, path: str, link: str, download_mode: DownloadMode, on_end, on_update):
+    def __StartDownload(self, path: str, link: str, on_end):
         asyncio.set_event_loop(self.__async_loop)
         self.__async_loop.run_until_complete(
-            self.__MangaAsyncDownloader.SaveAllChapters(
-                link=link,
-                path=path,
-                start_counter=1,
-                download_mode=download_mode,
-                on_update=on_update
-            )
+            self.__MangaAsyncDownloader.SaveAllChapters(link=link,path=path)
         )
         on_end()
 
     def __OnLinkChange(self):
-        posterLink = MangaDownloader.GetPoster(self.__linkValue.get())
+
+        manga_link: str = self.__linkEntry.get()
+
+        posterLink = MangaDownloader.GetPoster(manga_link)
         if not posterLink is None:
             self.master.LoadPoster(posterLink)
 
@@ -119,21 +116,21 @@ class DownloadChaptersFrame(Frame):
             messagebox.showerror("Error", "Please select a pictures or PSD saving mode")
             return
 
-        download_mod = DownloadMode.NULL
+        download_mode = DownloadMode.NULL
 
         if self.__savePicture.get():
-            download_mod |= DownloadMode.SAVE_PICTURES
+            download_mode |= DownloadMode.SAVE_PICTURES
 
         if self.__savePSD.get():
-            download_mod |= DownloadMode.SAVE_PSD
+            download_mode |= DownloadMode.SAVE_PSD
 
         if self.__saveFolder.get():
-            download_mod |= DownloadMode.SAVE_TO_FOLDER
+            download_mode |= DownloadMode.SAVE_TO_FOLDER
 
         if self.__saveArchive.get():
-            download_mod |= DownloadMode.SAVE_TO_ARCHIVE
+            download_mode |= DownloadMode.SAVE_TO_ARCHIVE
 
-        download_mod |= DownloadMode.MARK_NUMERATION
+        self.__MangaAsyncDownloader.DownloadMode = download_mode
 
         self.__downloadBtn['text'] = "Stop"
 
@@ -146,10 +143,11 @@ class DownloadChaptersFrame(Frame):
 
         def on_update():
             self.__progressBar.step(100 / chapters_number)
+        self.__MangaAsyncDownloader.OnUpdate = on_update
 
         downloadThread = Thread(
             target=self.__StartDownload,
-            args=(self.__savePath.get(), link, download_mod, on_end, on_update)
+            args=(self.__savePath.get(), link, on_end)
         )
         downloadThread.start()
 

@@ -1,0 +1,5 @@
+from downloaders.strategies.DownloadStrategy import DownloadStrategy
+from downloaders.strategies.DeletePicturesStrategy import DeletePicturesStrategy
+from downloaders.strategies.SavePSDStrategy import SavePSDStrategy
+from downloaders.strategies.ArchiveStrategy import ArchiveStrategy
+from downloaders.strategies.DeleteFolderStrategy import DeleteFolderStrategy
