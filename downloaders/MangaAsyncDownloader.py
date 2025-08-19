@@ -133,7 +133,7 @@ class MangaAsyncDownloader:
         for strategy in self.__strategies:
             strategy.Execute(f"{path}/{folderName}")
 
-    async def SaveAllChapters(self, link: str, path: str = "download") -> None:
+    async def SaveChapters(self, link: str, path: str = "download", chapters: list[MangaChapter] = None) -> None:
 
         if self.__is_working:
             raise "Manga downloader is already working"
@@ -143,7 +143,8 @@ class MangaAsyncDownloader:
         title = Convertor.ToSave(await MangaAsyncDownloader.GetTitleAsync(link))
         os.makedirs(f"{path}/{title}", exist_ok=True)
 
-        chapters: list[MangaChapter] = await MangaAsyncDownloader.GetAllChapters(link)
+        if chapters is None:
+            chapters: list[MangaChapter] = await MangaAsyncDownloader.GetAllChapters(link)
 
         semaphore = asyncio.Semaphore(self.__max_concurrent)
 

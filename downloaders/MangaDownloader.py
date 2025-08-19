@@ -2,6 +2,8 @@
 import requests
 
 from outils import MangaParser
+from entity import MangaChapter
+
 
 class MangaDownloader:
 
@@ -66,3 +68,34 @@ class MangaDownloader:
         if chapters is None:
             return 0
         return len(chapters)
+
+    @staticmethod
+    def GetChapters(link: str) -> list[MangaChapter] or None:
+        resp = requests.get(link)
+        if resp.status_code != 200:
+            return None
+        return MangaParser.ParseChapters(str(resp.content))
+
+    @staticmethod
+    def GetAllChapters(link) -> list[MangaChapter] or None:
+        chapters = []
+        previous_chapters = None
+
+        resp = requests.get(link)
+        if resp.status_code != 200:
+            return None
+
+        i: int = 1
+        while True:
+            current_link = link + "?start=" + str(i)
+            current_chapters = MangaDownloader.GetChapters(current_link)
+
+            if current_chapters is None or previous_chapters == current_chapters:
+                break
+
+            chapters += current_chapters
+
+            previous_chapters = current_chapters
+            i += 100
+
+        return chapters

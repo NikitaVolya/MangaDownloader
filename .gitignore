@@ -1,3 +1,7 @@
 download/
 .idea/
 __pycache__/
+file_version.txt
+dist/
+build/
+MangaDownloader.spec

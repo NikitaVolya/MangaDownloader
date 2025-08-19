@@ -1,13 +1,14 @@
 from tkinter import *
 
 from tkinter import filedialog, messagebox
-from tkinter.ttk import Progressbar, Style
+from tkinter.ttk import Progressbar, Style, Treeview
 
 import requests, httpx, asyncio
 
 from downloaders import MangaDownloader, MangaAsyncDownloader
-from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE
+from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE, APP_BACKGROUND
 from enums import DownloadMode
+from entity import MangaChapter
 
 from threading import Thread
 
@@ -15,12 +16,33 @@ from threading import Thread
 class DownloadChaptersFrame(Frame):
 
     def __init__(self, master: "MainWindow"):
-        super().__init__(master, bg="#1e1e1e")
+        super().__init__(master, bg=APP_BACKGROUND)
 
         self.master: "MainWindow" = master
 
+
+        style = Style()
+        style.theme_use("clam")
+
+        style.configure(
+            "Custom.Horizontal.TProgressbar",
+            troughcolor="#1e1e1e",
+            background="#007acc",
+            bordercolor="#1e1e1e",
+            lightcolor="#007acc",
+            darkcolor="#007acc",
+            thickness=20
+        )
+        style.configure(
+            "Custom.Treeview",
+            background=APP_BACKGROUND,
+            foreground="white",
+            fieldbackground=APP_BACKGROUND
+        )
+
+
         self.__linkValue = StringVar()
-        self.__linkValue.trace_add("write", (lambda a, b, c: self.__OnLinkChange()))
+        self.__linkValue.trace_add("write", lambda *args: self.__OnLinkChange())
 
         self.__savePath = StringVar()
         self.__savePath.set("download")
@@ -30,11 +52,15 @@ class DownloadChaptersFrame(Frame):
         self.__linkEntry = Entry(self, **ENTRY_STYLE, textvariable=self.__linkValue)
         self.__linkEntry.pack(fill=X, padx=10, pady=5)
 
-        self.__downloadBtn = Button(self, text="Download", **BTN_STYLE, command=lambda: self.__OnDownloadClick())
-        self.__downloadBtn.pack(fill=X, padx=10, pady=5)
-
         self.__selectPath = Button(self, text="Select path", **BTN_STYLE, command=lambda: self.__choseDirectory())
         self.__selectPath.pack(fill=X, padx=10, pady=5)
+
+        self.__selectedChapters = None
+        self.__chapters = []
+        self.__tree = Treeview(self, columns=["Chapter"], show="headings", selectmode="extended", style="Custom.Treeview")
+        self.__tree.heading("Chapter", text="Chapters")
+        self.__tree.column("Chapter", width=300)
+        self.__tree.pack(expand=True)
 
         self.__saveFolder = BooleanVar()
         self.__saveFolderCheckBox = Checkbutton(self, text="Save to folder", **CHK_STYLE, variable=self.__saveFolder)
@@ -58,37 +84,46 @@ class DownloadChaptersFrame(Frame):
 
         self.__async_loop = asyncio.new_event_loop()
 
-        style = Style()
-        style.theme_use("clam")
-
-        style.configure(
-            "Custom.Horizontal.TProgressbar",
-            troughcolor="#1e1e1e",
-            background="#007acc",
-            bordercolor="#1e1e1e",
-            lightcolor="#007acc",
-            darkcolor="#007acc",
-            thickness=20
-        )
+        self.__downloadBtn = Button(self, text="Download", **BTN_STYLE, command=lambda: self.__OnDownloadClick())
+        self.__downloadBtn.pack(fill=X, padx=10, pady=5)
 
         self.__progressBar = Progressbar(self, length=100, style="Custom.Horizontal.TProgressbar")
         self.__progressBar.pack(fill=X, padx=10, pady=5)
 
 
-    def __StartDownload(self, path: str, link: str, on_end):
-        asyncio.set_event_loop(self.__async_loop)
-        self.__async_loop.run_until_complete(
-            self.__MangaAsyncDownloader.SaveAllChapters(link=link,path=path)
-        )
-        on_end()
+    def UpdateSelectedChapters(self) -> list[MangaChapter]:
+        selection = self.__tree.selection()
+        result = [self.__chapters[int(iid)] for iid in selection]
+        self.__selectedChapters = result if len(result) > 0 else None
 
     def __OnLinkChange(self):
 
         manga_link: str = self.__linkEntry.get()
 
-        posterLink = MangaDownloader.GetPoster(manga_link)
-        if not posterLink is None:
-            self.master.LoadPoster(posterLink)
+        poster_link = MangaDownloader.GetPoster(manga_link)
+        if poster_link is None:
+            return
+
+        self.master.LoadPoster(poster_link)
+
+        self.__chapters = MangaDownloader.GetChapters(manga_link)
+        for i, chapter in enumerate(self.__chapters):
+            print(chapter)
+            self.__tree.insert('', END, iid=str(i), values=(chapter.Title,))
+
+    def __StartDownload(self):
+        asyncio.set_event_loop(self.__async_loop)
+        self.__async_loop.run_until_complete(
+            self.__MangaAsyncDownloader.SaveChapters(
+                link=self.__linkValue.get(),
+                path=self.__savePath.get(),
+                chapters=self.__selectedChapters
+            )
+        )
+
+        self.__downloadBtn['text'] = "Download"
+        messagebox.showinfo("Download Complete", "Download Complete")
+        self.__progressBar.config(value=0)
 
     def __OnDownloadClick(self):
 
@@ -116,6 +151,13 @@ class DownloadChaptersFrame(Frame):
             messagebox.showerror("Error", "Please select a pictures or PSD saving mode")
             return
 
+        self.UpdateSelectedChapters()
+
+        if self.__selectedChapters is None:
+            print("Aborting...")
+            messagebox.showerror("Error", "Chapters are not selected")
+            return
+
         download_mode = DownloadMode.NULL
 
         if self.__savePicture.get():
@@ -134,21 +176,11 @@ class DownloadChaptersFrame(Frame):
 
         self.__downloadBtn['text'] = "Stop"
 
-        def on_end():
-            self.__downloadBtn['text'] = "Download"
-            messagebox.showinfo("Download Complete", "Download Complete")
-            self.__progressBar.config(value=0)
-
-        chapters_number = MangaDownloader.GetChaptersNumber(link)
-
         def on_update():
-            self.__progressBar.step(100 / chapters_number)
+            self.__progressBar.step(100 / len(self.__selectedChapters))
         self.__MangaAsyncDownloader.OnUpdate = on_update
 
-        downloadThread = Thread(
-            target=self.__StartDownload,
-            args=(self.__savePath.get(), link, on_end)
-        )
+        downloadThread = Thread(target=self.__StartDownload)
         downloadThread.start()
 
 

@@ -15,7 +15,7 @@ class MainWindow(Tk):
         super().__init__()
 
         self.title("Manga Downloader")
-        self.geometry("750x340")
+        self.geometry("750x510")
         self.configure(bg="#1e1e1e")
 
         self.grid_columnconfigure(0, weight=3)
@@ -26,10 +26,11 @@ class MainWindow(Tk):
         self.posterFrame = Frame(self, bg="#1e1e1e")
         self.posterFrame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 
+        self.__posterSize = (300, 450)
         self.posterImg = ImageTk.PhotoImage(
             Image
-               .new("RGB", (200, 280), color=(50, 50, 50))
-               .resize((200, 280), Image.LANCZOS)
+               .new("RGB", self.__posterSize, color=(50, 50, 50))
+               .resize(self.__posterSize, Image.LANCZOS)
         )
 
         self.posterLabel = Label(self.posterFrame, image=self.posterImg, bg="#1e1e1e")
@@ -49,11 +50,11 @@ class MainWindow(Tk):
             response.raise_for_status()
             img_data = BytesIO(response.content)
             img = Image.open(img_data)
-            img = img.resize((200, 280), Image.LANCZOS)
+            img = img.resize(self.__posterSize, Image.LANCZOS)
             self.posterImg = ImageTk.PhotoImage(img)
         except Exception as e:
             print("Error loading image:", e)
-            img = Image.new("RGB", (200, 280), color=(50, 50, 50))
+            img = Image.new("RGB", self.__posterSize, color=(50, 50, 50))
             self.posterImg = ImageTk.PhotoImage(img)
 
         self.posterLabel.config(image=self.posterImg)

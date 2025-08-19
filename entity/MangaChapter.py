@@ -19,4 +19,7 @@ class MangaChapter:
         return self.__href == other.Href
 
     def __str__(self):
-        return f"( {self.Title} - {self.Href} )"
+        return f"<MangaChapter: {self.Title} - {self.Href}>"
+
+    def __repr__(self):
+        return f"<MangaChapter: {self.Title} - {self.Href}>"
