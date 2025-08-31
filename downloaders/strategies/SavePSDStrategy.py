@@ -8,6 +8,7 @@ class SavePSDStrategy(DownloadStrategy):
 
 
     def Execute(self, path: str):
+        print("Saving in PSD")
         files = os.listdir(path)
         for file in filter(lambda f: f.lower().endswith(".jpg"), files):
             Convertor.SaveAsPSD(f"{path}/{file}", f"{path}/{file.replace(".jpg", ".psd")}")

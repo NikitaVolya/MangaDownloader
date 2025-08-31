@@ -3,3 +3,4 @@ from downloaders.strategies.DeletePicturesStrategy import DeletePicturesStrategy
 from downloaders.strategies.SavePSDStrategy import SavePSDStrategy
 from downloaders.strategies.ArchiveStrategy import ArchiveStrategy
 from downloaders.strategies.DeleteFolderStrategy import DeleteFolderStrategy
+from downloaders.strategies.MergeFramesStrategy import MergeFramesStrategy

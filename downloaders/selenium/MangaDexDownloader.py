@@ -1,15 +1,15 @@
 from selenium.webdriver.support.expected_conditions import visibility_of_all_elements_located
 from selenium.webdriver.support.wait import WebDriverWait
 
-from downloaders.selenium.MangaDownloader import MangaDownloader
+from downloaders.IMangaDownloader import MangaDownloader
 from selenium.webdriver import Firefox
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 
-import base64
-import requests
-
 from entity import MangaChapter
+from outils import Convertor
+
+import os
 
 
 class MangaDexDownloader(MangaDownloader):
@@ -19,6 +19,7 @@ class MangaDexDownloader(MangaDownloader):
     __options.set_preference("media.volume_scale", "0.0")
 
     def __init__(self):
+        super().__init__()
 
         self.__driver = Firefox(options=MangaDexDownloader.__options)
 
@@ -84,29 +85,54 @@ class MangaDexDownloader(MangaDownloader):
             print(e)
             return []
 
-    def GetMangaPages(self, link: str) -> list[str]:
+    def DownloadMangaPages(self, link: str, path = "download") -> list[str]:
         self.__driver.get(link)
 
         try:
             rep: list[str] = []
 
-            pages = WebDriverWait(self.__driver, 2000).until(
+            pages = WebDriverWait(self.__driver, 5000).until(
                 visibility_of_all_elements_located(
                     (By.XPATH, "//div[@class='md--page ls limit-width mx-auto']/img")
                 )
             )
 
             for i, page in enumerate(pages):
-                image_href = page.get_attribute("src")
-                rep.append(image_href)
-
-                with open(f"download/{i + 1}.png", "wb") as f:
+                image_path = f"{path}/{i + 1}.jpg"
+                with open(image_path, "wb") as f:
                     f.write(page.screenshot_as_png)
+                rep.append(image_path)
             return rep
         except Exception as e:
             print(e)
             return []
 
-    def DownloadPage(self, link: str):
-        self.__driver.get(link)
-        img = self.__driver.find_element(By.TAG_NAME, "img")
+    def DownloadChapter(self, manga_chapter: MangaChapter, path = "download"):
+
+        chapter_path = f"{path}/{Convertor.ToSave(manga_chapter.Title)}"
+        os.makedirs(chapter_path, exist_ok=True)
+        self.DownloadMangaPages(manga_chapter.Href, chapter_path)
+
+        for strategy in self._strategies:
+            strategy.Execute(chapter_path)
+
+    def DownloadChapters(self, link: str, path: str = "download", chapters: list[MangaChapter] = None) -> None:
+
+        title = Convertor.ToSave(self.GetTitle(link))
+        os.makedirs(f"{path}/{title}", exist_ok=True)
+
+        if chapters is None:
+            chapters: list[MangaChapter] = self.GetChapters(link)
+
+        for chapter in chapters:
+            while True:
+                print("Starting chapter:", chapter.Href)
+                try:
+                    self.DownloadChapter(chapter, f"{path}/{title}")
+                except Exception as e:
+                    print("Error chapter", chapter.Href, "Error:", e)
+                    print("Retrying...", chapter.Href)
+                    continue
+                break
+            if self.OnDownloadFinished:
+                self.OnDownloadFinished()

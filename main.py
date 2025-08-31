@@ -1,8 +1,9 @@
-
+from entity import MangaChapter
 from userInterface import MainWindow
+from enums import DownloadMode
 import asyncio
 
-from downloaders.selenium import MangaDexDownloader
+from downloaders import MangaDexDownloader
 
 
 async def Main():
@@ -12,12 +13,7 @@ async def Main():
     href = "https://mangadex.org/title/575c6f8b-02bc-4300-b808-16e35c2bc2e2"
 
     downloader: MangaDexDownloader = MangaDexDownloader()
-    #print(downloader.GetPosterLink(href))
-    #print(downloader.GetTitle(href))
-    #print(downloader.GetChapters(href))
-    links = downloader.GetMangaPages("https://mangadex.org/chapter/462746f9-5fd8-4b3a-b276-0b82fa2db857")
-    print(links)
-    downloader.DownloadPage(links[0])
+    downloader.DownloadMode = DownloadMode.SAVE_PICTURES | DownloadMode.MERGE_PICTURES | DownloadMode.SAVE_TO_FOLDER
 
 
 if __name__ == "__main__":
