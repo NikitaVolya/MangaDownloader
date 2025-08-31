@@ -13,7 +13,10 @@ async def Main():
     href = "https://mangadex.org/title/575c6f8b-02bc-4300-b808-16e35c2bc2e2"
 
     downloader: MangaDexDownloader = MangaDexDownloader()
-    downloader.DownloadMode = DownloadMode.SAVE_PICTURES | DownloadMode.MERGE_PICTURES | DownloadMode.SAVE_TO_FOLDER
+    downloader.DownloadMode = DownloadMode.MERGE_PICTURES | DownloadMode.SAVE_TO_FOLDER
+
+    chapters = downloader.GetChapters(href)
+    downloader.DownloadChapters(href, chapters=[chapters[8]])
 
 
 if __name__ == "__main__":

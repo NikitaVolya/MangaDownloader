@@ -29,7 +29,7 @@ class MangaDownloader(ABC):
         self._strategies = []
 
         if DownloadMode.MERGE_PICTURES in self.__download_mode:
-            self._strategies.append(MergeFramesStrategy())
+            self._strategies.append(MergeFramesStrategy(DownloadMode.SAVE_PICTURES in self.__download_mode))
 
         if DownloadMode.SAVE_PSD in self.__download_mode:
             self._strategies.append(SavePSDStrategy())

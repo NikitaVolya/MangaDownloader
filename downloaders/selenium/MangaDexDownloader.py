@@ -55,7 +55,6 @@ class MangaDexDownloader(MangaDownloader):
             rep: list[MangaChapter] = []
 
             while True:
-
                 page_buttons = WebDriverWait(self.__driver, 10).until(
                     visibility_of_all_elements_located(
                         (By.XPATH, "//div[@class='flex justify-center flex-wrap gap-2 mt-6']/button")
@@ -90,6 +89,15 @@ class MangaDexDownloader(MangaDownloader):
 
         try:
             rep: list[str] = []
+
+            nextChapterButton = WebDriverWait(self.__driver, 10).until(
+                visibility_of_all_elements_located(
+                    (By.XPATH, "//span[text()='Next Chapter']")
+                )
+            )[0]
+
+            self.__driver.execute_script("arguments[0].scrollIntoView()", nextChapterButton)
+
 
             pages = WebDriverWait(self.__driver, 5000).until(
                 visibility_of_all_elements_located(
