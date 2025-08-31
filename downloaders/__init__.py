@@ -1,2 +1,2 @@
-from downloaders.requests import *
 from downloaders.selenium import *
+from downloaders.MangaRequestsDownloader import MangaRequestsDownloader

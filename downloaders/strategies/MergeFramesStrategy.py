@@ -5,8 +5,8 @@ import os
 
 class MergeFramesStrategy(DownloadStrategy):
 
-    def __init__(self, save_original):
-        self.__save_original = save_original
+    def __init__(self, save_original: bool = False):
+        self.__save_original: bool = save_original
 
     def Execute(self, path: str):
 

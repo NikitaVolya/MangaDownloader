@@ -1,7 +1,7 @@
 from selenium.webdriver.support.expected_conditions import visibility_of_all_elements_located
 from selenium.webdriver.support.wait import WebDriverWait
 
-from downloaders.IMangaDownloader import MangaDownloader
+from downloaders.IMangaDownloader import IMangaDownloader
 from selenium.webdriver import Firefox
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
@@ -9,10 +9,12 @@ from selenium.webdriver.common.by import By
 from entity import MangaChapter
 from outils import Convertor
 
+from time import sleep
+
 import os
 
 
-class MangaDexDownloader(MangaDownloader):
+class MangaDexDownloader(IMangaDownloader):
 
     __options = Options()
     __options.add_argument('--headless')
@@ -98,6 +100,7 @@ class MangaDexDownloader(MangaDownloader):
 
             self.__driver.execute_script("arguments[0].scrollIntoView()", nextChapterButton)
 
+            sleep(2)
 
             pages = WebDriverWait(self.__driver, 5000).until(
                 visibility_of_all_elements_located(
@@ -142,5 +145,5 @@ class MangaDexDownloader(MangaDownloader):
                     print("Retrying...", chapter.Href)
                     continue
                 break
-            if self.OnDownloadFinished:
-                self.OnDownloadFinished()
+            if self.OnDownloadChapterFinished:
+                self.OnDownloadChapterFinished()

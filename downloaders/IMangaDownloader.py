@@ -4,9 +4,12 @@ from downloaders.strategies import ArchiveStrategy, DeletePicturesStrategy, \
 from enums import DownloadMode
 from entity import MangaChapter
 
+from outils import Convertor
+import os
 
 
-class MangaDownloader(ABC):
+
+class IMangaDownloader(ABC):
 
     def __init__(self):
 
@@ -15,7 +18,16 @@ class MangaDownloader(ABC):
         self.__download_mode = DownloadMode.STANDARD
         self._strategies = []
 
-        self.OnDownloadFinished = None
+        self.__isWorking = False
+
+        self.OnDownloadChapterFinished = None
+
+    @property
+    def IsWorking(self):
+        return self.__isWorking
+
+    def Stop(self):
+        self.__isWorking = False
 
     @property
     def DownloadMode(self):
@@ -53,7 +65,7 @@ class MangaDownloader(ABC):
         ...
 
     @abstractmethod
-    def GetChapters(self, link: str) -> list[str]:
+    def GetChapters(self, link: str) -> list[MangaChapter]:
         ...
 
     @abstractmethod
@@ -64,6 +76,31 @@ class MangaDownloader(ABC):
     def DownloadChapter(self, manga_chapter: MangaChapter, path = "download"):
         ...
 
-    @abstractmethod
     def DownloadChapters(self, link: str, path: str = "download", chapters: list[MangaChapter] = None) -> None:
-        ...
+
+        self.__isWorking = True
+
+        link = link.split("?")[0]
+
+        title = Convertor.ToSave(self.GetTitle(link))
+        os.makedirs(f"{path}/{title}", exist_ok=True)
+
+        if chapters is None:
+            chapters: list[MangaChapter] = self.GetChapters(link)
+
+        for chapter in chapters:
+            while True:
+                if not self.__isWorking:
+                    break
+                print("Starting chapter:", chapter.Href)
+                try:
+                    self.DownloadChapter(chapter, f"{path}/{title}")
+                except Exception as e:
+                    print("Error chapter", chapter.Href, "Error:", e)
+                    print("Retrying...", chapter.Href)
+                    continue
+                break
+            if self.OnDownloadChapterFinished:
+                self.OnDownloadChapterFinished()
+
+        self.__isWorking = False
