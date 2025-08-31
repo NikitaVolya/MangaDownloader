@@ -3,7 +3,8 @@ import os
 
 from downloaders.strategies import ArchiveStrategy, DeletePicturesStrategy, SavePSDStrategy, DeleteFolderStrategy
 from entity import MangaChapter
-from outils import Convertor, MangaParser, Counter
+from parsers import MangaParserInterface
+from outils import Convertor
 from enums import DownloadMode
 
 import httpx, asyncio
@@ -11,11 +12,13 @@ import httpx, asyncio
 
 class MangaAsyncDownloader:
 
-    __client = httpx.AsyncClient(timeout=30.0)
+    def __init__(self, parser: MangaParserInterface):
 
-    def __init__(self):
+        self.__client = httpx.AsyncClient(timeout=30.0)
 
         self.__is_working = False
+
+        self.__parser: MangaParserInterface = parser
 
         self.__max_concurrent = 3
 
@@ -54,47 +57,42 @@ class MangaAsyncDownloader:
     def Stop(self):
         self.__is_working = False
 
-    @staticmethod
-    async def GetTitleAsync(link):
-        resp = await MangaAsyncDownloader.__client.get(link)
+    async def GetTitleAsync(self, link):
+        resp = await self.__client.get(link)
         if resp.status_code != 200:
             return None
-        return MangaParser.ParseTitle(str(resp.content))
+        return self.__parser.ParseTitle(str(resp.content))
 
-    @staticmethod
-    async def GetPosterAsync(link):
-        resp = await MangaAsyncDownloader.__client.get(link)
+    async def GetPosterAsync(self, link):
+        resp = await self.__client.get(link)
         if resp.status_code != 200:
             return None
-        return MangaParser.ParsePosterLink(str(resp.content))
+        return self.__parser.ParsePosterLink(str(resp.content))
 
-    @staticmethod
-    async def __GetPagesLinksAsync(link) -> list[str] or None:
-        resp = await MangaAsyncDownloader.__client.get(link)
+    async def __GetPagesLinksAsync(self, link) -> list[str] or None:
+        resp = await self.__client.get(link)
         if resp.status_code != 200:
             return None
-        return MangaParser.ParsePagesLinks(str(resp.content))
+        return self.__parser.ParsePagesLinks(str(resp.content))
 
-    @staticmethod
-    async def GetChapters(link: str) -> list[MangaChapter] or None:
-        resp = await MangaAsyncDownloader.__client.get(link)
+    async def GetChapters(self, link: str) -> list[MangaChapter] or None:
+        resp = await self.__client.get(link)
         if resp.status_code != 200:
             return None
-        return MangaParser.ParseChapters(str(resp.content))
+        return self.__parser.ParseChapters(str(resp.content))
 
-    @staticmethod
-    async def GetAllChapters(link) -> list[MangaChapter] or None:
+    async def GetAllChapters(self, link) -> list[MangaChapter] or None:
         chapters = []
         previous_chapters = None
 
-        resp = await MangaAsyncDownloader.__client.get(link)
+        resp = await self.__client.get(link)
         if resp.status_code != 200:
             return None
 
         i: int = 1
         while True:
             current_link = link + "?start=" + str(i)
-            current_chapters = await MangaAsyncDownloader.GetChapters(current_link)
+            current_chapters = await self.GetChapters(current_link)
 
             if current_chapters is None or previous_chapters == current_chapters:
                 break
@@ -111,7 +109,7 @@ class MangaAsyncDownloader:
         if not self.__is_working:
             return
 
-        pagesLinks: list[str] = await MangaAsyncDownloader.__GetPagesLinksAsync(chapter.Href)
+        pagesLinks: list[str] = await self.__GetPagesLinksAsync(chapter.Href)
         if pagesLinks is None:
             print("No pages found")
             return
@@ -122,7 +120,7 @@ class MangaAsyncDownloader:
 
         for i, current_link in enumerate(pagesLinks):
 
-            resp = await MangaAsyncDownloader.__client.get(current_link)
+            resp = await self.__client.get(current_link)
             img_data = resp.content
 
             image_path = f'{path}/{folderName}/{i + 1}.jpg'
@@ -140,11 +138,11 @@ class MangaAsyncDownloader:
 
         self.__is_working = True
 
-        title = Convertor.ToSave(await MangaAsyncDownloader.GetTitleAsync(link))
+        title = Convertor.ToSave(await self.GetTitleAsync(link))
         os.makedirs(f"{path}/{title}", exist_ok=True)
 
         if chapters is None:
-            chapters: list[MangaChapter] = await MangaAsyncDownloader.GetAllChapters(link)
+            chapters: list[MangaChapter] = await self.GetAllChapters(link)
 
         semaphore = asyncio.Semaphore(self.__max_concurrent)
 

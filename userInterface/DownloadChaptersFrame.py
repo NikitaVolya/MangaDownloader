@@ -8,7 +8,7 @@ import requests, httpx, asyncio
 from downloaders import MangaDownloader, MangaAsyncDownloader
 from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE, APP_BACKGROUND
 from enums import DownloadMode
-from entity import MangaChapter
+from parsers import BatoToParser
 
 from threading import Thread
 
@@ -80,9 +80,6 @@ class DownloadChaptersFrame(Frame):
         self.__savePSDCheckBox = Checkbutton(self, text="Save with PSD", **CHK_STYLE, variable=self.__savePSD)
         self.__savePSDCheckBox.pack(anchor="w", padx=10, pady=2)
 
-        self.__MangaAsyncDownloader = MangaAsyncDownloader()
-
-        self.__async_loop = asyncio.new_event_loop()
 
         self.__downloadBtn = Button(self, text="Download", **BTN_STYLE, command=lambda: self.__OnDownloadClick())
         self.__downloadBtn.pack(fill=X, padx=10, pady=5)
@@ -90,8 +87,13 @@ class DownloadChaptersFrame(Frame):
         self.__progressBar = Progressbar(self, length=100, style="Custom.Horizontal.TProgressbar")
         self.__progressBar.pack(fill=X, padx=10, pady=5)
 
+        self.__MangaAsyncDownloader = MangaAsyncDownloader(BatoToParser())
+        self.__mangaDownloader = MangaDownloader(BatoToParser())
 
-    def UpdateSelectedChapters(self) -> list[MangaChapter]:
+        self.__async_loop = asyncio.new_event_loop()
+
+
+    def UpdateSelectedChapters(self):
         selection = self.__tree.selection()
         result = [self.__chapters[int(iid)] for iid in selection]
         self.__selectedChapters = result if len(result) > 0 else None
@@ -100,13 +102,13 @@ class DownloadChaptersFrame(Frame):
 
         manga_link: str = self.__linkEntry.get()
 
-        poster_link = MangaDownloader.GetPoster(manga_link)
+        poster_link = self.__mangaDownloader.GetPoster(manga_link)
         if poster_link is None:
             return
 
         self.master.LoadPoster(poster_link)
 
-        self.__chapters = MangaDownloader.GetChapters(manga_link)
+        self.__chapters = self.__mangaDownloader.GetChapters(manga_link)
         for i, chapter in enumerate(self.__chapters):
             print(chapter)
             self.__tree.insert('', END, iid=str(i), values=(chapter.Title,))

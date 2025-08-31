@@ -42,8 +42,6 @@ class MainWindow(Tk):
         self.__icon = PhotoImage(file="src/icon.png")
         self.iconphoto(False, self.__icon)
 
-
-
     def LoadPoster(self, url):
         try:
             response = requests.get(url, timeout=5)
