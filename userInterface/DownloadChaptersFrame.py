@@ -5,7 +5,7 @@ from tkinter.ttk import Progressbar, Style, Treeview
 
 import requests, httpx, asyncio
 
-from downloaders import MangaDownloader, MangaAsyncDownloader
+from downloaders import MangaRequestsDownloader, MangaRequestsAsyncDownloader
 from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE, APP_BACKGROUND
 from enums import DownloadMode
 from parsers import BatoToParser
@@ -87,8 +87,8 @@ class DownloadChaptersFrame(Frame):
         self.__progressBar = Progressbar(self, length=100, style="Custom.Horizontal.TProgressbar")
         self.__progressBar.pack(fill=X, padx=10, pady=5)
 
-        self.__MangaAsyncDownloader = MangaAsyncDownloader(BatoToParser())
-        self.__mangaDownloader = MangaDownloader(BatoToParser())
+        self.__MangaAsyncDownloader = MangaRequestsAsyncDownloader(BatoToParser())
+        self.__mangaDownloader = MangaRequestsDownloader(BatoToParser())
 
         self.__async_loop = asyncio.new_event_loop()
 

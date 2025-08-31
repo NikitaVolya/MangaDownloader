@@ -5,7 +5,7 @@ from entity import MangaChapter
 from parsers import MangaParserInterface
 
 
-class MangaDownloader:
+class MangaRequestsDownloader:
 
     def __init__(self, parser: MangaParserInterface):
 

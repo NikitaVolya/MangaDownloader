@@ -1,2 +1,2 @@
-from downloaders.MangaDownloader import MangaDownloader
-from downloaders.MangaAsyncDownloader import MangaAsyncDownloader
+from downloaders.requests.MangaRequestsDownloader import MangaRequestsDownloader
+from downloaders.requests.MangaRequestsAsyncDownloader import MangaRequestsAsyncDownloader

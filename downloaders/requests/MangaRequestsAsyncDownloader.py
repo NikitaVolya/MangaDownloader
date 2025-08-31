@@ -10,7 +10,7 @@ from enums import DownloadMode
 import httpx, asyncio
 
 
-class MangaAsyncDownloader:
+class MangaRequestsAsyncDownloader:
 
     def __init__(self, parser: MangaParserInterface):
 
