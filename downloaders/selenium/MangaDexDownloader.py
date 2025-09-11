@@ -17,7 +17,7 @@ import os, time
 class MangaDexDownloader(IMangaDownloader):
 
     __options = Options()
-    #__options.add_argument('--headless')
+    __options.add_argument('--headless')
 
     def __init__(self):
         super().__init__()
