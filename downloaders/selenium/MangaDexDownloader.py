@@ -1,3 +1,5 @@
+import time
+
 from selenium.webdriver.support.expected_conditions import visibility_of_all_elements_located
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -9,16 +11,13 @@ from selenium.webdriver.common.by import By
 from entity import MangaChapter
 from outils import Convertor
 
-from time import sleep
-
-import os
+import os, time
 
 
 class MangaDexDownloader(IMangaDownloader):
 
     __options = Options()
-    __options.add_argument('--headless')
-    __options.set_preference("media.volume_scale", "0.0")
+    #__options.add_argument('--headless')
 
     def __init__(self):
         super().__init__()
@@ -89,6 +88,24 @@ class MangaDexDownloader(IMangaDownloader):
     def DownloadMangaPages(self, link: str, path = "download") -> list[str]:
         self.__driver.get(link)
 
+        menuButton = WebDriverWait(self.__driver, 10).until(
+            visibility_of_all_elements_located(
+                (By.CLASS_NAME, "menu")
+            )
+        )
+        menuButton[0].click()
+
+        menuOptions = WebDriverWait(self.__driver, 10).until(
+            visibility_of_all_elements_located(
+                (By.XPATH, '//div[@class="flex flex-col gap-2"]/button')
+            )
+        )
+
+        while True:
+            if menuOptions[0].text.lower() == "long strip":
+                break
+            menuOptions[0].click()
+
         try:
             rep: list[str] = []
 
@@ -98,13 +115,12 @@ class MangaDexDownloader(IMangaDownloader):
                 )
             )[0]
 
+            time.sleep(1)
+
             self.__driver.execute_script("arguments[0].scrollIntoView()", nextChapterButton)
-
-            sleep(2)
-
-            pages = WebDriverWait(self.__driver, 5000).until(
+            pages = WebDriverWait(self.__driver, 3000).until(
                 visibility_of_all_elements_located(
-                    (By.XPATH, "//div[@class='md--page ls limit-width mx-auto']/img")
+                    (By.XPATH, "//div[@class='md--page ls limit-width limit-height mx-auto']/img")
                 )
             )
 
