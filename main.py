@@ -1,4 +1,3 @@
-
 from userInterface import MainWindow
 
 def Main():

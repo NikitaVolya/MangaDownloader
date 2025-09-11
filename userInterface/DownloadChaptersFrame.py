@@ -7,7 +7,7 @@ import requests
 
 from downloaders import MangaRequestsDownloader, MangaDexDownloader
 from downloaders.IMangaDownloader import IMangaDownloader
-from parsers import BatoToParser
+from parsers import BatoToParser, XBatoParser
 
 from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE, APP_BACKGROUND
 from enums import DownloadMode
@@ -68,7 +68,7 @@ class DownloadChaptersFrame(Frame):
         self.__size_combo = Combobox(
             self,
             textvariable=self.__selected_site,
-            values=["Bato.To", "MangoDex"],
+            values=["Bato.To", "MangoDex", "XBato.com"],
             style="Custom.TCombobox",
             state="readonly"
         )
@@ -135,6 +135,8 @@ class DownloadChaptersFrame(Frame):
             self.__mangaDownloader = MangaRequestsDownloader(BatoToParser())
         elif name == "MangoDex":
             self.__mangaDownloader = MangaDexDownloader()
+        elif name == "XBato.com":
+            self.__mangaDownloader = MangaRequestsDownloader(XBatoParser())
         else:
             messagebox.showerror("Error", "Invalid site")
             self.__selected_site.set("")
@@ -153,6 +155,8 @@ class DownloadChaptersFrame(Frame):
             site_name = "Bato.To"
         elif manga_link.lower().startswith("https://mangadex.org"):
             site_name = "MangoDex"
+        elif manga_link.lower().startswith("https://xbato.com"):
+            site_name = "XBato.com"
         else:
             messagebox.showerror("Error", "Invalid site")
             return

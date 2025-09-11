@@ -1,2 +1,3 @@
 from parsers.MangaParserInterface import MangaParserInterface
 from parsers.BatoToParser import BatoToParser
+from parsers.XBatoParser import XBatoParser
