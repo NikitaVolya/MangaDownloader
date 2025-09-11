@@ -54,4 +54,4 @@ class Convertor:
 
     @staticmethod
     def ToSave(value: str) -> str:
-        return "".join([c for c in value if c.isalpha() or c == " " or c.isdigit()])
+        return "".join([c for c in value.replace(".", "_") if c.isalpha() or c == " " or c == "_" or c.isdigit()])

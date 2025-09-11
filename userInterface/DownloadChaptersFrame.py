@@ -1,14 +1,16 @@
 from tkinter import *
 
 from tkinter import filedialog, messagebox
-from tkinter.ttk import Progressbar, Style, Treeview
+from tkinter.ttk import Progressbar, Style, Treeview, Combobox
 
-import requests, httpx, asyncio
+import requests
 
-from downloaders import MangaDownloader, MangaAsyncDownloader
+from downloaders import MangaRequestsDownloader, MangaDexDownloader
+from downloaders.IMangaDownloader import IMangaDownloader
+from parsers import BatoToParser
+
 from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE, APP_BACKGROUND
 from enums import DownloadMode
-from parsers import BatoToParser
 
 from threading import Thread
 
@@ -39,7 +41,42 @@ class DownloadChaptersFrame(Frame):
             foreground="white",
             fieldbackground=APP_BACKGROUND
         )
+        style.map(
+            "Custom.TCombobox",
+            fieldbackground=[("readonly", "#2d2d2d"), ("!disabled", "#2d2d2d")],
+            foreground=[("readonly", "white"), ("!disabled", "white")],
+        )
 
+        style.configure(
+            "Custom.TCombobox",
+            fieldbackground="#2d2d2d",
+            background="#2d2d2d",
+            foreground="white",
+            selectbackground="#007acc",
+            selectforeground="white",
+            arrowcolor="white",
+            borderwidth=0,
+            relief=FLAT,
+            padding=5
+        )
+
+
+
+        Label(self, text="Site for manga", **LABEL_STYLE).pack()
+
+        self.__selected_site = StringVar()
+        self.__size_combo = Combobox(
+            self,
+            textvariable=self.__selected_site,
+            values=["Bato.To", "MangoDex"],
+            style="Custom.TCombobox",
+            state="readonly"
+        )
+        self.__size_combo.pack(fill=X, padx=10, pady=5)
+
+        self.__size_combo.bind("<<ComboboxSelected>>", lambda e: self.ChangeSite(self.__selected_site.get()))
+
+        Label(self, text="Link to main page of manga", **LABEL_STYLE).pack()
 
         self.__linkValue = StringVar()
         self.__linkValue.trace_add("write", lambda *args: self.__OnLinkChange())
@@ -47,7 +84,6 @@ class DownloadChaptersFrame(Frame):
         self.__savePath = StringVar()
         self.__savePath.set("download")
 
-        Label(self, text="Link to main page of manga", **LABEL_STYLE).pack()
 
         self.__linkEntry = Entry(self, **ENTRY_STYLE, textvariable=self.__linkValue)
         self.__linkEntry.pack(fill=X, padx=10, pady=5)
@@ -80,6 +116,9 @@ class DownloadChaptersFrame(Frame):
         self.__savePSDCheckBox = Checkbutton(self, text="Save with PSD", **CHK_STYLE, variable=self.__savePSD)
         self.__savePSDCheckBox.pack(anchor="w", padx=10, pady=2)
 
+        self.__mergeFrames = BooleanVar()
+        self.__mergeFramesCheckBox = Checkbutton(self, text="Merge frames", **CHK_STYLE, variable=self.__mergeFrames)
+        self.__mergeFramesCheckBox.pack(anchor="w", padx=10, pady=2)
 
         self.__downloadBtn = Button(self, text="Download", **BTN_STYLE, command=lambda: self.__OnDownloadClick())
         self.__downloadBtn.pack(fill=X, padx=10, pady=5)
@@ -87,10 +126,18 @@ class DownloadChaptersFrame(Frame):
         self.__progressBar = Progressbar(self, length=100, style="Custom.Horizontal.TProgressbar")
         self.__progressBar.pack(fill=X, padx=10, pady=5)
 
-        self.__MangaAsyncDownloader = MangaAsyncDownloader(BatoToParser())
-        self.__mangaDownloader = MangaDownloader(BatoToParser())
+        self.__mangaDownloader: IMangaDownloader = None
 
-        self.__async_loop = asyncio.new_event_loop()
+    def ChangeSite(self, name: str):
+        print(f"Change site to {name}")
+        self.__selected_site.set(name)
+        if name == "Bato.To":
+            self.__mangaDownloader = MangaRequestsDownloader(BatoToParser())
+        elif name == "MangoDex":
+            self.__mangaDownloader = MangaDexDownloader()
+        else:
+            messagebox.showerror("Error", "Invalid site")
+            self.__selected_site.set("")
 
 
     def UpdateSelectedChapters(self):
@@ -102,7 +149,18 @@ class DownloadChaptersFrame(Frame):
 
         manga_link: str = self.__linkEntry.get()
 
-        poster_link = self.__mangaDownloader.GetPoster(manga_link)
+        if manga_link.lower().startswith("https://bato.si"):
+            site_name = "Bato.To"
+        elif manga_link.lower().startswith("https://mangadex.org"):
+            site_name = "MangoDex"
+        else:
+            messagebox.showerror("Error", "Invalid site")
+            return
+
+        if site_name != self.__selected_site.get():
+            self.ChangeSite(site_name)
+
+        poster_link = self.__mangaDownloader.GetPosterLink(manga_link)
         if poster_link is None:
             return
 
@@ -114,14 +172,11 @@ class DownloadChaptersFrame(Frame):
             self.__tree.insert('', END, iid=str(i), values=(chapter.Title,))
 
     def __StartDownload(self):
-        asyncio.set_event_loop(self.__async_loop)
-        self.__async_loop.run_until_complete(
-            self.__MangaAsyncDownloader.SaveChapters(
+        self.__mangaDownloader.DownloadChapters(
                 link=self.__linkValue.get(),
                 path=self.__savePath.get(),
                 chapters=self.__selectedChapters
             )
-        )
 
         self.__downloadBtn['text'] = "Download"
         messagebox.showinfo("Download Complete", "Download Complete")
@@ -129,8 +184,8 @@ class DownloadChaptersFrame(Frame):
 
     def __OnDownloadClick(self):
 
-        if self.__MangaAsyncDownloader.IsWorking:
-            self.__MangaAsyncDownloader.Stop()
+        if self.__mangaDownloader.IsWorking:
+            self.__mangaDownloader.Stop()
             return
 
         print("Downloading...")
@@ -148,7 +203,7 @@ class DownloadChaptersFrame(Frame):
             messagebox.showerror("Error", "Please select a folder or archive saving mode")
             return
 
-        if (not self.__savePicture.get()) and (not self.__savePSD.get()):
+        if (not self.__savePicture.get()) and (not self.__savePSD.get() and (not self.__mergeFrames.get())):
             print("Aborting...")
             messagebox.showerror("Error", "Please select a pictures or PSD saving mode")
             return
@@ -174,13 +229,16 @@ class DownloadChaptersFrame(Frame):
         if self.__saveArchive.get():
             download_mode |= DownloadMode.SAVE_TO_ARCHIVE
 
-        self.__MangaAsyncDownloader.DownloadMode = download_mode
+        if self.__mergeFrames.get():
+            download_mode |= DownloadMode.MERGE_PICTURES
+
+        self.__mangaDownloader.DownloadMode = download_mode
 
         self.__downloadBtn['text'] = "Stop"
 
         def on_update():
             self.__progressBar.step(100 / len(self.__selectedChapters))
-        self.__MangaAsyncDownloader.OnUpdate = on_update
+        self.__mangaDownloader.OnDownloadChapterFinished = on_update
 
         downloadThread = Thread(target=self.__StartDownload)
         downloadThread.start()
