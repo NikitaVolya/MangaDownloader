@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from downloaders.strategies import ArchiveStrategy, DeletePicturesStrategy, \
     SavePSDStrategy, DeleteFolderStrategy, MergeFramesStrategy
+from downloaders.StrategyProcessing import StrategyProcessing
 from enums import DownloadMode
 from entity import MangaChapter
 
@@ -11,9 +12,9 @@ import os
 
 class IMangaDownloader(ABC):
 
-    def __init__(self):
+    _strategyProcessing = StrategyProcessing()
 
-        self._max_concurrent = 3
+    def __init__(self):
 
         self.__download_mode = DownloadMode.STANDARD
         self._strategies = []
@@ -28,6 +29,8 @@ class IMangaDownloader(ABC):
 
     def Stop(self):
         self.__isWorking = False
+        if self._strategyProcessing.IsWork():
+            self._strategyProcessing.Stop()
 
     @property
     def DownloadMode(self):
@@ -55,6 +58,11 @@ class IMangaDownloader(ABC):
         if not DownloadMode.SAVE_TO_FOLDER in self.__download_mode:
             self._strategies.append(DeleteFolderStrategy())
 
+    def WorkStrategies(self, folder_path: str):
+        self._strategyProcessing.AddStrategy(self._strategies, folder_path)
+        self._strategyProcessing.Start(
+            on_update=self.OnDownloadChapterFinished
+        )
 
     @abstractmethod
     def GetPosterLink(self, link: str) -> str | None:
@@ -72,9 +80,11 @@ class IMangaDownloader(ABC):
     def DownloadMangaPages(self, link: str, path = "download") -> list[str]:
         ...
 
-    @abstractmethod
     def DownloadChapter(self, manga_chapter: MangaChapter, path = "download"):
-        ...
+        chapter_path = f"{path}/{Convertor.ToSave(manga_chapter.Title)}"
+        os.makedirs(chapter_path, exist_ok=True)
+        self.DownloadMangaPages(manga_chapter.Href, chapter_path)
+        self.WorkStrategies(chapter_path)
 
     def DownloadChapters(self, link: str, path: str = "download", chapters: list[MangaChapter] = None) -> None:
 
@@ -100,7 +110,5 @@ class IMangaDownloader(ABC):
                     print("Retrying...", chapter.Href)
                     continue
                 break
-            if self.OnDownloadChapterFinished:
-                self.OnDownloadChapterFinished()
-
+        self._strategyProcessing.Stop()
         self.__isWorking = False

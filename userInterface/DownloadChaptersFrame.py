@@ -3,7 +3,7 @@ from tkinter import *
 from tkinter import filedialog, messagebox
 from tkinter.ttk import Progressbar, Style, Treeview, Combobox
 
-import requests
+import requests, math
 
 from downloaders import MangaRequestsDownloader, MangaDexDownloader
 from downloaders.IMangaDownloader import IMangaDownloader
@@ -123,7 +123,8 @@ class DownloadChaptersFrame(Frame):
         self.__downloadBtn = Button(self, text="Download", **BTN_STYLE, command=lambda: self.__OnDownloadClick())
         self.__downloadBtn.pack(fill=X, padx=10, pady=5)
 
-        self.__progressBar = Progressbar(self, length=100, style="Custom.Horizontal.TProgressbar")
+        self.__progress = IntVar()
+        self.__progressBar = Progressbar(self, length=100, style="Custom.Horizontal.TProgressbar", variable=self.__progress)
         self.__progressBar.pack(fill=X, padx=10, pady=5)
 
         self.__mangaDownloader: IMangaDownloader = None
@@ -172,7 +173,6 @@ class DownloadChaptersFrame(Frame):
 
         self.__chapters = self.__mangaDownloader.GetChapters(manga_link)
         for i, chapter in enumerate(self.__chapters):
-            print(chapter)
             self.__tree.insert('', END, iid=str(i), values=(chapter.Title,))
 
     def __StartDownload(self):
@@ -182,14 +182,9 @@ class DownloadChaptersFrame(Frame):
                 chapters=self.__selectedChapters
             )
 
-        self.__downloadBtn['text'] = "Download"
-        messagebox.showinfo("Download Complete", "Download Complete")
-        self.__progressBar.config(value=0)
-
     def __OnDownloadClick(self):
 
         if self.__mangaDownloader.IsWorking:
-            self.__mangaDownloader.Stop()
             return
 
         print("Downloading...")
@@ -238,10 +233,15 @@ class DownloadChaptersFrame(Frame):
 
         self.__mangaDownloader.DownloadMode = download_mode
 
-        self.__downloadBtn['text'] = "Stop"
+        self.__downloadBtn['text'] = "Downloading..."
 
         def on_update():
-            self.__progressBar.step(100 / len(self.__selectedChapters))
+            self.__progressBar.step(math.ceil(100 / len(self.__selectedChapters)))
+
+            if self.__progress.get() == 0:
+                self.__downloadBtn['text'] = "Download"
+                messagebox.showinfo("Download Complete", "Download Complete")
+
         self.__mangaDownloader.OnDownloadChapterFinished = on_update
 
         downloadThread = Thread(target=self.__StartDownload)
@@ -252,5 +252,3 @@ class DownloadChaptersFrame(Frame):
         folder_path = filedialog.askdirectory(title="Оберіть папку для збереження")
         if folder_path:
             self.__savePath.set(folder_path)
-
-

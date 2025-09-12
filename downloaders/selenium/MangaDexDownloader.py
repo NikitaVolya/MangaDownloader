@@ -17,7 +17,7 @@ import os, time
 class MangaDexDownloader(IMangaDownloader):
 
     __options = Options()
-    __options.add_argument('--headless')
+    #__options.add_argument('--headless')
 
     def __init__(self):
         super().__init__()
@@ -64,11 +64,15 @@ class MangaDexDownloader(IMangaDownloader):
 
                 next_button = page_buttons[-1]
 
+                time.sleep(1)
+
                 chapters = WebDriverWait(self.__driver, 10).until(
                     visibility_of_all_elements_located((By.XPATH, "//div[@class='bg-accent rounded-sm']"))
                 )
 
+
                 for chapter in chapters:
+                    print(chapter)
                     lines = chapter.find_elements(By.XPATH, "div")
 
                     title = chapter.find_element(By.CLASS_NAME, "chapter-link" if len(lines) == 1 else "chapter-header").text
@@ -76,7 +80,7 @@ class MangaDexDownloader(IMangaDownloader):
 
                     rep.append(MangaChapter(href, title))
 
-                if "disabled" in next_button.get_attribute("class"):
+                if next_button is None or "disabled" in next_button.get_attribute("class"):
                     break
 
                 next_button.click()
@@ -133,33 +137,3 @@ class MangaDexDownloader(IMangaDownloader):
         except Exception as e:
             print(e)
             return []
-
-    def DownloadChapter(self, manga_chapter: MangaChapter, path = "download"):
-
-        chapter_path = f"{path}/{Convertor.ToSave(manga_chapter.Title)}"
-        os.makedirs(chapter_path, exist_ok=True)
-        self.DownloadMangaPages(manga_chapter.Href, chapter_path)
-
-        for strategy in self._strategies:
-            strategy.Execute(chapter_path)
-
-    def DownloadChapters(self, link: str, path: str = "download", chapters: list[MangaChapter] = None) -> None:
-
-        title = Convertor.ToSave(self.GetTitle(link))
-        os.makedirs(f"{path}/{title}", exist_ok=True)
-
-        if chapters is None:
-            chapters: list[MangaChapter] = self.GetChapters(link)
-
-        for chapter in chapters:
-            while True:
-                print("Starting chapter:", chapter.Href)
-                try:
-                    self.DownloadChapter(chapter, f"{path}/{title}")
-                except Exception as e:
-                    print("Error chapter", chapter.Href, "Error:", e)
-                    print("Retrying...", chapter.Href)
-                    continue
-                break
-            if self.OnDownloadChapterFinished:
-                self.OnDownloadChapterFinished()

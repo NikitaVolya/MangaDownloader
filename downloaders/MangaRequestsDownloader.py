@@ -88,12 +88,3 @@ class MangaRequestsDownloader(IMangaDownloader):
             rep.append(image_path)
 
         return rep
-
-    def DownloadChapter(self, manga_chapter: MangaChapter, path = "download"):
-
-        chapter_path = f"{path}/{Convertor.ToSave(manga_chapter.Title)}"
-        os.makedirs(chapter_path, exist_ok=True)
-        self.DownloadMangaPages(manga_chapter.Href, chapter_path)
-
-        for strategy in self._strategies:
-            strategy.Execute(chapter_path)
