@@ -9,15 +9,14 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 
 from entity import MangaChapter
-from outils import Convertor
 
-import os, time
+import time
 
 
 class MangaDexDownloader(IMangaDownloader):
 
     __options = Options()
-    #__options.add_argument('--headless')
+    __options.add_argument('--headless')
 
     def __init__(self):
         super().__init__()
@@ -52,42 +51,30 @@ class MangaDexDownloader(IMangaDownloader):
     def GetChapters(self, link: str) -> list[MangaChapter]:
         self.__driver.get(link)
 
-        try:
-            rep: list[MangaChapter] = []
+        rep: list[MangaChapter] = []
 
-            while True:
-                page_buttons = WebDriverWait(self.__driver, 10).until(
-                    visibility_of_all_elements_located(
-                        (By.XPATH, "//div[@class='flex justify-center flex-wrap gap-2 mt-6']/button")
-                    )
-                )
+        while True:
+            page_buttons = self.__driver.find_elements(By.XPATH, "//div[@class='flex justify-center flex-wrap gap-2 mt-6']/button")
 
-                next_button = page_buttons[-1]
+            next_button = page_buttons[-1] if len(page_buttons) > 0 else None
 
-                time.sleep(1)
+            chapters = WebDriverWait(self.__driver, 10).until(
+                visibility_of_all_elements_located((By.XPATH, "//div[@class='bg-accent rounded-sm']"))
+            )
 
-                chapters = WebDriverWait(self.__driver, 10).until(
-                    visibility_of_all_elements_located((By.XPATH, "//div[@class='bg-accent rounded-sm']"))
-                )
+            for chapter in chapters:
+                lines = chapter.find_elements(By.XPATH, "div")
 
+                title = chapter.find_element(By.CLASS_NAME, "chapter-link" if len(lines) == 1 else "chapter-header").text
+                href = chapter.find_elements(By.CLASS_NAME, "chapter-grid")[0].get_attribute("href")
 
-                for chapter in chapters:
-                    print(chapter)
-                    lines = chapter.find_elements(By.XPATH, "div")
+                rep.append(MangaChapter(href, title))
 
-                    title = chapter.find_element(By.CLASS_NAME, "chapter-link" if len(lines) == 1 else "chapter-header").text
-                    href = chapter.find_elements(By.CLASS_NAME, "chapter-grid")[0].get_attribute("href")
+            if next_button is None or "disabled" in next_button.get_attribute("class"):
+                break
 
-                    rep.append(MangaChapter(href, title))
-
-                if next_button is None or "disabled" in next_button.get_attribute("class"):
-                    break
-
-                next_button.click()
-            return rep
-        except Exception as e:
-            print(e)
-            return []
+            next_button.click()
+        return rep
 
     def DownloadMangaPages(self, link: str, path = "download") -> list[str]:
         self.__driver.get(link)
@@ -97,8 +84,13 @@ class MangaDexDownloader(IMangaDownloader):
                 (By.CLASS_NAME, "menu")
             )
         )
-        menuButton[0].click()
+        time.sleep(1)
+        try:
+            menuButton[0].click()
+        except:
+            pass
 
+        time.sleep(1)
         menuOptions = WebDriverWait(self.__driver, 10).until(
             visibility_of_all_elements_located(
                 (By.XPATH, '//div[@class="flex flex-col gap-2"]/button')
@@ -110,30 +102,35 @@ class MangaDexDownloader(IMangaDownloader):
                 break
             menuOptions[0].click()
 
-        try:
-            rep: list[str] = []
+        rep: list[str] = []
 
-            nextChapterButton = WebDriverWait(self.__driver, 10).until(
+        nextChapterButton = None
+        try:
+            nextChapterButton = WebDriverWait(self.__driver, 3).until(
                 visibility_of_all_elements_located(
                     (By.XPATH, "//span[text()='Next Chapter']")
                 )
-            )[0]
+            )
+        except:
+            pass
 
-            time.sleep(1)
-
-            self.__driver.execute_script("arguments[0].scrollIntoView()", nextChapterButton)
-            pages = WebDriverWait(self.__driver, 3000).until(
+        if nextChapterButton is None:
+            nextChapterButton = WebDriverWait(self.__driver, 3).until(
                 visibility_of_all_elements_located(
-                    (By.XPATH, "//div[@class='md--page ls limit-width limit-height mx-auto']/img")
+                    (By.XPATH, "//span[text()='Return to title page']")
                 )
             )
 
-            for i, page in enumerate(pages):
-                image_path = f"{path}/{i + 1}.jpg"
-                with open(image_path, "wb") as f:
-                    f.write(page.screenshot_as_png)
-                rep.append(image_path)
-            return rep
-        except Exception as e:
-            print(e)
-            return []
+        self.__driver.execute_script("arguments[0].scrollIntoView()", nextChapterButton[0])
+        pages = WebDriverWait(self.__driver, 10).until(
+            visibility_of_all_elements_located(
+                (By.XPATH, "//div[@class='md--page ls limit-width limit-height mx-auto']/img")
+            )
+        )
+
+        for i, page in enumerate(pages):
+            image_path = f"{path}/{i + 1}.jpg"
+            with open(image_path, "wb") as f:
+                f.write(page.screenshot_as_png)
+            rep.append(image_path)
+        return rep
