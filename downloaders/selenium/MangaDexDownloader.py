@@ -1,5 +1,3 @@
-import time
-
 from selenium.webdriver.support.expected_conditions import visibility_of_all_elements_located
 from selenium.webdriver.support.wait import WebDriverWait
 

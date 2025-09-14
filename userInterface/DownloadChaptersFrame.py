@@ -1,7 +1,7 @@
 from tkinter import *
 
 from tkinter import filedialog, messagebox
-from tkinter.ttk import Progressbar, Style, Treeview, Combobox
+from tkinter.ttk import Progressbar, Style, Combobox
 
 import requests, math
 
@@ -10,6 +10,7 @@ from downloaders.IMangaDownloader import IMangaDownloader
 from parsers import BatoToParser, XBatoParser
 
 from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE, APP_BACKGROUND
+from userInterface.ChaptersList import ChaptersList
 from enums import DownloadMode
 
 from threading import Thread
@@ -21,7 +22,6 @@ class DownloadChaptersFrame(Frame):
         super().__init__(master, bg=APP_BACKGROUND)
 
         self.master: "MainWindow" = master
-
 
         style = Style()
         style.theme_use("clam")
@@ -60,8 +60,6 @@ class DownloadChaptersFrame(Frame):
             padding=5
         )
 
-
-
         Label(self, text="Site for manga", **LABEL_STYLE).pack()
 
         self.__selected_site = StringVar()
@@ -79,24 +77,20 @@ class DownloadChaptersFrame(Frame):
         Label(self, text="Link to main page of manga", **LABEL_STYLE).pack()
 
         self.__linkValue = StringVar()
-        self.__linkValue.trace_add("write", lambda *args: self.__OnLinkChange())
 
         self.__savePath = StringVar()
         self.__savePath.set("download")
 
-
         self.__linkEntry = Entry(self, **ENTRY_STYLE, textvariable=self.__linkValue)
         self.__linkEntry.pack(fill=X, padx=10, pady=5)
+
+        self.__loadManga = Button(self, text="Load Manga", **BTN_STYLE, command=lambda : self.__OnLinkChange())
+        self.__loadManga.pack(fill=X, padx=10, pady=5)
 
         self.__selectPath = Button(self, text="Select path", **BTN_STYLE, command=lambda: self.__choseDirectory())
         self.__selectPath.pack(fill=X, padx=10, pady=5)
 
-        self.__selectedChapters = None
-        self.__chapters = []
-        self.__tree = Treeview(self, columns=["Chapter"], show="headings", selectmode="extended", style="Custom.Treeview")
-        self.__tree.heading("Chapter", text="Chapters")
-        self.__tree.column("Chapter", width=300)
-        self.__tree.pack(expand=True)
+        self.__chaptersList = ChaptersList(self)
 
         self.__saveFolder = BooleanVar()
         self.__saveFolderCheckBox = Checkbutton(self, text="Save to folder", **CHK_STYLE, variable=self.__saveFolder)
@@ -142,12 +136,6 @@ class DownloadChaptersFrame(Frame):
             messagebox.showerror("Error", "Invalid site")
             self.__selected_site.set("")
 
-
-    def UpdateSelectedChapters(self):
-        selection = self.__tree.selection()
-        result = [self.__chapters[int(iid)] for iid in selection]
-        self.__selectedChapters = result if len(result) > 0 else None
-
     def __OnLinkChange(self):
 
         manga_link: str = self.__linkEntry.get()
@@ -170,16 +158,14 @@ class DownloadChaptersFrame(Frame):
             return
 
         self.master.LoadPoster(poster_link)
+        self.__chaptersList.LoadChapters(self.__mangaDownloader, manga_link)
 
-        self.__chapters = self.__mangaDownloader.GetChapters(manga_link)
-        for i, chapter in enumerate(self.__chapters):
-            self.__tree.insert('', END, iid=str(i), values=(chapter.Title,))
 
     def __StartDownload(self):
         self.__mangaDownloader.DownloadChapters(
                 link=self.__linkValue.get(),
                 path=self.__savePath.get(),
-                chapters=self.__selectedChapters
+                chapters=self.__chaptersList.SelectedChapters
             )
 
     def __OnDownloadClick(self):
@@ -207,9 +193,8 @@ class DownloadChaptersFrame(Frame):
             messagebox.showerror("Error", "Please select a pictures or PSD saving mode")
             return
 
-        self.UpdateSelectedChapters()
-
-        if self.__selectedChapters is None:
+        selectedChapters = self.__chaptersList.SelectedChapters
+        if selectedChapters is None:
             print("Aborting...")
             messagebox.showerror("Error", "Chapters are not selected")
             return
@@ -236,7 +221,7 @@ class DownloadChaptersFrame(Frame):
         self.__downloadBtn['text'] = "Downloading..."
 
         def on_update():
-            self.__progressBar.step(math.ceil(100 / len(self.__selectedChapters)))
+            self.__progressBar.step(math.ceil(100 / len(selectedChapters)))
 
             if self.__progress.get() == 0:
                 self.__downloadBtn['text'] = "Download"
