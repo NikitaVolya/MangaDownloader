@@ -9,6 +9,8 @@ from downloaders import MangaRequestsDownloader, MangaDexDownloader
 from downloaders.IMangaDownloader import IMangaDownloader
 from parsers import BatoToParser, XBatoParser
 
+from registry import MangaDownloadersContainer
+
 from userInterface.Setup import ENTRY_STYLE, BTN_STYLE, LABEL_STYLE, CHK_STYLE, APP_BACKGROUND
 from userInterface.ChaptersList import ChaptersList
 from enums import DownloadMode
@@ -63,10 +65,12 @@ class DownloadChaptersFrame(Frame):
         Label(self, text="Site for manga", **LABEL_STYLE).pack()
 
         self.__selected_site = StringVar()
+
+        site_names = [dd.Name for dd in MangaDownloadersContainer.DownloaderDataList()]
         self.__size_combo = Combobox(
             self,
             textvariable=self.__selected_site,
-            values=["Bato.To", "MangoDex", "XBato.com"],
+            values=site_names,
             style="Custom.TCombobox",
             state="readonly"
         )
@@ -126,32 +130,24 @@ class DownloadChaptersFrame(Frame):
     def ChangeSite(self, name: str):
         print(f"Change site to {name}")
         self.__selected_site.set(name)
-        if name == "Bato.To":
-            self.__mangaDownloader = MangaRequestsDownloader(BatoToParser())
-        elif name == "MangoDex":
-            self.__mangaDownloader = MangaDexDownloader()
-        elif name == "XBato.com":
-            self.__mangaDownloader = MangaRequestsDownloader(XBatoParser())
-        else:
+        downloaderData = MangaDownloadersContainer.GetDownloaderDataByName(name)
+        if downloaderData is None:
             messagebox.showerror("Error", "Invalid site")
             self.__selected_site.set("")
+
+        downloaderConstructor = downloaderData.DownloaderConstructor
+        self.__mangaDownloader= downloaderConstructor()
 
     def __OnLinkChange(self):
 
         manga_link: str = self.__linkEntry.get()
 
-        if manga_link.lower().startswith("https://bato.si"):
-            site_name = "Bato.To"
-        elif manga_link.lower().startswith("https://mangadex.org"):
-            site_name = "MangoDex"
-        elif manga_link.lower().startswith("https://xbato.com"):
-            site_name = "XBato.com"
-        else:
+        downloaderData = MangaDownloadersContainer.GetDownloaderDataByHref(manga_link)
+        if downloaderData is None:
             messagebox.showerror("Error", "Invalid site")
             return
 
-        if site_name != self.__selected_site.get():
-            self.ChangeSite(site_name)
+        self.__mangaDownloader = downloaderData.DownloaderConstructor()
 
         poster_link = self.__mangaDownloader.GetPosterLink(manga_link)
         if poster_link is None:

@@ -1,6 +1,5 @@
-from Cython.Compiler.Errors import reset
 
-from parsers import MangaParserInterface
+from parsers.MangaParserInterface import MangaParserInterface
 from entity import MangaChapter
 
 from bs4 import BeautifulSoup

@@ -119,7 +119,10 @@ class MangaDexDownloader(IMangaDownloader):
                 )
             )
 
+        time.sleep(2)
+
         self.__driver.execute_script("arguments[0].scrollIntoView()", nextChapterButton[0])
+
         pages = WebDriverWait(self.__driver, 10).until(
             visibility_of_all_elements_located(
                 (By.XPATH, "//div[@class='md--page ls limit-width limit-height mx-auto']/img")

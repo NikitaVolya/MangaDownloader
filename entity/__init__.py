@@ -1,1 +1,2 @@
 from entity.MangaChapter import MangaChapter
+from entity.DownloaderData import DownloaderData

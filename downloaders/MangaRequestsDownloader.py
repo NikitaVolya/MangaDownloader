@@ -2,11 +2,9 @@
 import requests
 
 from entity import MangaChapter
-from parsers import MangaParserInterface
+from parsers.MangaParserInterface import MangaParserInterface
 
 from downloaders.IMangaDownloader import IMangaDownloader
-from outils import Convertor
-import os
 
 
 class MangaRequestsDownloader(IMangaDownloader):

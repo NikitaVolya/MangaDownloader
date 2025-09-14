@@ -1,6 +1,7 @@
 
 import re
 from bs4 import BeautifulSoup
+
 from entity import MangaChapter
 
 from parsers.MangaParserInterface import MangaParserInterface
@@ -54,3 +55,4 @@ class BatoToParser(MangaParserInterface):
             rep.append(MangaChapter(chapter["href"], chapter.text))
         rep.reverse()
         return rep
+

@@ -1,9 +1,16 @@
+from registry import MangaDownloadersContainer
 from userInterface import MainWindow
 
 
 def Main():
+
+
+    for downloaderData in MangaDownloadersContainer.DownloaderDataList():
+        print(downloaderData.Name)
+
     window = MainWindow()
     window.mainloop()
+
 
 
 

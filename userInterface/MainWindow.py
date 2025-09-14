@@ -15,7 +15,7 @@ class MainWindow(Tk):
         super().__init__()
 
         self.title("Manga Downloader")
-        self.geometry("750x600")
+        self.geometry("750x700")
         self.configure(bg="#1e1e1e")
 
         self.grid_columnconfigure(0, weight=3)

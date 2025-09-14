@@ -1,3 +1,3 @@
-from downloaders.selenium import *
+from downloaders.selenium import MangaDexDownloader
 from downloaders.MangaRequestsDownloader import MangaRequestsDownloader
-from downloaders.StrategyProcessing import StrategyProcessing
+from downloaders.IMangaDownloader import IMangaDownloader
