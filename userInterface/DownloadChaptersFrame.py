@@ -114,6 +114,10 @@ class DownloadChaptersFrame(Frame):
         self.__savePSDCheckBox = Checkbutton(self, text="Save with PSD", **CHK_STYLE, variable=self.__savePSD)
         self.__savePSDCheckBox.pack(anchor="w", padx=10, pady=2)
 
+        self.__savePDF = BooleanVar()
+        self.__savePDFCheckBox = Checkbutton(self, text="Save PDF", **CHK_STYLE, variable=self.__savePDF)
+        self.__savePDFCheckBox.pack(anchor="w", padx=10, pady=2)
+
         self.__mergeFrames = BooleanVar()
         self.__mergeFramesCheckBox = Checkbutton(self, text="Merge frames", **CHK_STYLE, variable=self.__mergeFrames)
         self.__mergeFramesCheckBox.pack(anchor="w", padx=10, pady=2)
@@ -208,6 +212,9 @@ class DownloadChaptersFrame(Frame):
 
         if self.__saveArchive.get():
             download_mode |= DownloadMode.SAVE_TO_ARCHIVE
+
+        if self.__savePDF.get():
+            download_mode |= DownloadMode.SAVE_PDF
 
         if self.__mergeFrames.get():
             download_mode |= DownloadMode.MERGE_PICTURES

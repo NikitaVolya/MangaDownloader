@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from downloaders.strategies import ArchiveStrategy, DeletePicturesStrategy, \
-    SavePSDStrategy, DeleteFolderStrategy, MergeFramesStrategy
+    SavePSDStrategy, DeleteFolderStrategy, MergeFramesStrategy, SavePDFStrategy
 from downloaders.StrategyProcessing import StrategyProcessing
 from enums import DownloadMode
 from entity import MangaChapter
@@ -48,6 +48,9 @@ class IMangaDownloader(ABC):
 
         if DownloadMode.SAVE_PSD in self.__download_mode:
             self._strategies.append(SavePSDStrategy())
+
+        if DownloadMode.SAVE_PDF in self.__download_mode:
+            self._strategies.append(SavePDFStrategy())
 
         if not DownloadMode.SAVE_PICTURES in self.__download_mode:
             self._strategies.append(DeletePicturesStrategy())
