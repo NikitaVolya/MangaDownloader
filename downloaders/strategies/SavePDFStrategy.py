@@ -15,6 +15,7 @@ class SavePDFStrategy(DownloadStrategy):
             if file.lower().endswith((".jpg", ".png")):
                 full_path = os.path.join(path, file)
 
+                tmp_path = None
                 with Image.open(full_path) as image:
                     if image.mode in ("RGBA", "LA"):
                         background = Image.new("RGB", image.size, (255, 255, 255))
@@ -28,6 +29,7 @@ class SavePDFStrategy(DownloadStrategy):
 
                 file_name = os.path.splitext(file)[0]
                 output_path = os.path.join(path, f"{file_name}.pdf")
+                os.remove(tmp_path)
 
                 with open(output_path, "wb") as f:
                     f.write(pdf_bytes)
