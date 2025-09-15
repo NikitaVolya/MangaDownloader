@@ -1,3 +1,3 @@
-from downloaders.selenium import MangaDexDownloader
+from downloaders.selenium import MangaDexDownloader, HoneyMangaDownloader
 from downloaders.MangaRequestsDownloader import MangaRequestsDownloader
 from downloaders.IMangaDownloader import IMangaDownloader

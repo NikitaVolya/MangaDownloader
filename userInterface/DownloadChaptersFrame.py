@@ -217,7 +217,7 @@ class DownloadChaptersFrame(Frame):
         self.__downloadBtn['text'] = "Downloading..."
 
         def on_update():
-            self.__progressBar.step(math.ceil(100 / len(selectedChapters)))
+            self.__progressBar.step(100 / len(selectedChapters))
 
             if self.__progress.get() == 0:
                 self.__downloadBtn['text'] = "Download"

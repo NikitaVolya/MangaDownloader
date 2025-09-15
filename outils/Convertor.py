@@ -5,6 +5,7 @@ import numpy as np
 
 from pytoshop.user.nested_layers import Image as PSDImage, nested_layers_to_psd
 from pytoshop.enums import ColorMode, BlendMode
+import re
 
 
 class Convertor:
@@ -54,4 +55,4 @@ class Convertor:
 
     @staticmethod
     def ToSave(value: str) -> str:
-        return "".join([c for c in value.replace(".", "_") if c.isalpha() or c == " " or c == "_" or c.isdigit()])
+        return re.sub(r'[\\/:*?"<>|]', "", value).strip()

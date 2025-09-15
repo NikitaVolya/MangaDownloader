@@ -2,7 +2,7 @@
 from MangaDownloadersContainer import MangaDownloadersContainer
 
 from parsers import BatoToParser, XBatoParser
-from downloaders.selenium import MangaDexDownloader
+from downloaders.selenium import MangaDexDownloader, HoneyMangaDownloader
 
 MangaDownloadersContainer.RegisterParser(
     "BatoTo",
@@ -20,4 +20,10 @@ MangaDownloadersContainer.RegisterDownloader(
     "MangaDex",
     "https://mangadex.org",
     MangaDexDownloader
+)
+
+MangaDownloadersContainer.RegisterDownloader(
+    "HoneyManga",
+    "https://honey-manga.com.ua",
+    HoneyMangaDownloader
 )

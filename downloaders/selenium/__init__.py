@@ -1,1 +1,2 @@
 from downloaders.selenium.MangaDexDownloader import MangaDexDownloader
+from downloaders.selenium.HoneyMangaDownloader import HoneyMangaDownloader
