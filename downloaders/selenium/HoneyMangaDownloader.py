@@ -58,11 +58,9 @@ class HoneyMangaDownloader(IMangaDownloader):
         rep = []
 
         while True:
-            elements = WebDriverWait(self.__driver, 10).until(
-                visibility_of_all_elements_located(
-                    (By.XPATH, "//li/button[@class='MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-rounded MuiPaginationItem-previousNext css-i4f9pm']")
-                )
-            )
+            time.sleep(1)
+            elements = self.__driver.find_elements(By.XPATH, "//li/button[@class='MuiButtonBase-root MuiPaginationItem-root MuiPaginationItem-sizeMedium MuiPaginationItem-text MuiPaginationItem-rounded MuiPaginationItem-previousNext css-i4f9pm']")
+
             time.sleep(1)
 
             chapters = WebDriverWait(self.__driver, 10).until(
