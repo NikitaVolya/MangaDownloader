@@ -1,5 +1,4 @@
 from registry import MangaDownloadersContainer
-from downloaders.selenium import HoneyMangaDownloader
 from userInterface import MainWindow
 
 

@@ -1,3 +1,4 @@
+from numbers import Number
 
 from downloaders.strategies.DownloadStrategy import DownloadStrategy
 
@@ -29,7 +30,9 @@ class SavePDFStrategy(DownloadStrategy):
 
                 file_name = os.path.splitext(file)[0]
                 output_path = os.path.join(path, f"{file_name}.pdf")
-                os.remove(tmp_path)
+
+                if tmp_path is not None:
+                    os.remove(tmp_path)
 
                 with open(output_path, "wb") as f:
                     f.write(pdf_bytes)

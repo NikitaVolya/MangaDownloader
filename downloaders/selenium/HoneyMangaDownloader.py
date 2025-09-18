@@ -6,6 +6,8 @@ from selenium.webdriver import Firefox
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 
+import requests
+
 from entity import MangaChapter
 
 import time
@@ -49,13 +51,15 @@ class HoneyMangaDownloader(IMangaDownloader):
         return elements[0].text
 
     def GetChapters(self, link: str) -> list[MangaChapter]:
+
+
+        endFlag: bool = False
+
+        rep: list[MangaChapter] = []
+
         self.__driver.get(link)
         self.__driver.execute_script("localStorage.setItem('ADULT_MODE', true)")
         self.__driver.get(link)
-
-        endFlag = False
-
-        rep = []
 
         while True:
             time.sleep(1)
@@ -71,12 +75,16 @@ class HoneyMangaDownloader(IMangaDownloader):
 
             for chapter in chapters:
                 chapterHref = chapter.get_attribute("href")
-                chapterTitle = chapter.find_element(By.CLASS_NAME, "font-medium").text
+                chapterTitle = chapter.find_element(By.CLASS_NAME, "font-medium")
 
-                rep.append(
-                    MangaChapter(chapterHref, chapterTitle)
-                )
+                # Find elements indicating that the chapter is locked for premium users
+                mangaLock = chapterTitle.find_elements(By.TAG_NAME, "svg")
 
+                # If the chapter is free, add it to the response list
+                if len(mangaLock) == 0:
+                    rep.append(
+                        MangaChapter(chapterHref, chapterTitle.text)
+                    )
 
             if len(elements) == 0 or (len(elements) == 1 and endFlag):
                 break
@@ -84,39 +92,55 @@ class HoneyMangaDownloader(IMangaDownloader):
                 elements[0].click()
             else:
                 elements[1].click()
-
             endFlag = True
 
         return rep
 
     def DownloadMangaPages(self, link: str, path = "download") -> list[str]:
-        self.__driver.get(link)
-        self.__driver.execute_script('document.getElementsByClassName("grid-cols-12")[0].style.visibility = "hidden";')
 
-        lastNumber = 0
-        pages = []
+        rep: list[str] = []
+
+        saved_pages = set()
+
+        firstCycle: bool = True
+        lastNumber: int = 0
+        i: int = 0
+
+        imageXPath = "//div[@class='relative dark:bg-gray-800 bg-gray-200 MuiBox-root css-1pffsdl']/span[@class=' lazy-load-image-background opacity lazy-load-image-loaded']/img"
+
+        self.__driver.get(link)
 
         time.sleep(4)
 
         while True:
+
             pages = self.__driver.find_elements(
-                By.XPATH, "//div[@class='relative dark:bg-gray-800 bg-gray-200 MuiBox-root css-1pffsdl']/span[@class=' lazy-load-image-background opacity lazy-load-image-loaded']/img"
+                By.XPATH, imageXPath
             )
 
-            self.__driver.execute_script("arguments[0].scrollIntoView();", pages[-1])
-            self.__driver.execute_script("window.scrollBy(0,arguments[0])", pages[-1].size["height"] + 500)
+            for page in pages:
+                if page.get_attribute("src") in saved_pages:
+                    continue
+                saved_pages.add(page.get_attribute("src"))
+                src = page.get_attribute("src")
+
+                image_path = f"{path}/{i + 1}.jpg"
+                i += 1
+
+                with open(image_path, "wb") as f:
+                    f.write(requests.get(src).content)
+                rep.append(image_path)
+
+
+            if len(pages) != 0:
+                self.__driver.execute_script("arguments[0].scrollIntoView();", pages[-1])
+                self.__driver.execute_script("window.scrollBy(0,arguments[0])", pages[-1].size["height"] + 500)
+
             time.sleep(4)
 
-            if lastNumber == len(pages):
+            if not firstCycle and lastNumber == len(pages):
                 break
             lastNumber = len(pages)
+            firstCycle = False
 
-
-        rep: list[str] = []
-
-        for i, page in enumerate(pages):
-            image_path = f"{path}/{i + 1}.jpg"
-            with open(image_path, "wb") as f:
-                f.write(page.screenshot_as_png)
-            rep.append(image_path)
         return rep
