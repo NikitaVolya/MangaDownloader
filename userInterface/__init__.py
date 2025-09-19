@@ -1,4 +1,5 @@
 from userInterface.DownloadChaptersFrame import DownloadChaptersFrame
 from userInterface.MainWindow import MainWindow
 from userInterface.ChaptersList import ChaptersList
+from userInterface.WebPoster import WebPoster
 from userInterface import Setup

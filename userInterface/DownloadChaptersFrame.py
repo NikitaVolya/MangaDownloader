@@ -3,11 +3,9 @@ from tkinter import *
 from tkinter import filedialog, messagebox
 from tkinter.ttk import Progressbar, Style, Combobox
 
-import requests, math
+import requests
 
-from downloaders import MangaRequestsDownloader, MangaDexDownloader
 from downloaders.IMangaDownloader import IMangaDownloader
-from parsers import BatoToParser, XBatoParser
 
 from registry import MangaDownloadersContainer
 
@@ -20,10 +18,10 @@ from threading import Thread
 
 class DownloadChaptersFrame(Frame):
 
-    def __init__(self, master: "MainWindow"):
+    def __init__(self, master):
         super().__init__(master, bg=APP_BACKGROUND)
 
-        self.master: "MainWindow" = master
+        self.master = master
 
         style = Style()
         style.theme_use("clam")
@@ -157,7 +155,7 @@ class DownloadChaptersFrame(Frame):
         if poster_link is None:
             return
 
-        self.master.LoadPoster(poster_link)
+        self.master.poster.LoadPoster(poster_link)
         self.__chaptersList.LoadChapters(self.__mangaDownloader, manga_link)
 
 
