@@ -2,10 +2,11 @@
 from entity import MangaChapter
 from downloaders.IMangaDownloader import IMangaDownloader
 
-from tkinter.ttk import Treeview
+from tkinter.ttk import Treeview, Style
 from tkinter import END
 
 from threading import Thread
+from userInterface.Setup import APP_BACKGROUND
 
 
 class ChaptersList:
@@ -20,6 +21,16 @@ class ChaptersList:
         self.__tree.heading("Chapter", text="Chapters")
         self.__tree.column("Chapter", width=300)
         self.__tree.pack(expand=True)
+
+        style = Style()
+        style.theme_use("clam")
+
+        style.configure(
+            "Custom.Treeview",
+            background=APP_BACKGROUND,
+            foreground="white",
+            fieldbackground=APP_BACKGROUND
+        )
 
 
     def Clear(self):

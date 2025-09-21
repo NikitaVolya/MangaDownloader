@@ -1,7 +1,7 @@
 from tkinter import *
 
 from tkinter import filedialog, messagebox
-from tkinter.ttk import Progressbar, Style, Combobox
+from tkinter.ttk import Progressbar, Style
 
 import requests
 
@@ -17,6 +17,40 @@ from threading import Thread
 
 
 class DownloadChaptersFrame(Frame):
+
+    class DownloadOption:
+
+        def __init__(self, master: "DownloadChaptersFrame", title: str, mode: DownloadMode):
+            self.__master = master
+            self.__booleanValue = BooleanVar()
+            self.__title = title
+            self.__mode = mode
+
+            self.__checkButton = None
+
+        def packTkinterElement(self, is_selected: bool = False):
+            self.__checkButton = Checkbutton(
+                self.__master,
+                text=self.__title,
+                **CHK_STYLE,
+                variable=self.__booleanValue
+            )
+            if is_selected:
+                self.__checkButton.select()
+            self.__checkButton.pack(anchor="w", padx=10, pady=2)
+
+        @property
+        def DownloadMode(self) -> DownloadMode:
+            return self.__mode
+
+        @property
+        def Title(self) -> str:
+            return self.__title
+
+        @property
+        def Selected(self) -> bool:
+            return self.__booleanValue.get()
+
 
     def __init__(self, master):
         super().__init__(master, bg=APP_BACKGROUND)
@@ -35,90 +69,37 @@ class DownloadChaptersFrame(Frame):
             darkcolor="#007acc",
             thickness=20
         )
-        style.configure(
-            "Custom.Treeview",
-            background=APP_BACKGROUND,
-            foreground="white",
-            fieldbackground=APP_BACKGROUND
-        )
-        style.map(
-            "Custom.TCombobox",
-            fieldbackground=[("readonly", "#2d2d2d"), ("!disabled", "#2d2d2d")],
-            foreground=[("readonly", "white"), ("!disabled", "white")],
-        )
-
-        style.configure(
-            "Custom.TCombobox",
-            fieldbackground="#2d2d2d",
-            background="#2d2d2d",
-            foreground="white",
-            selectbackground="#007acc",
-            selectforeground="white",
-            arrowcolor="white",
-            borderwidth=0,
-            relief=FLAT,
-            padding=5
-        )
-
-        Label(self, text="Site for manga", **LABEL_STYLE).pack()
-
-        self.__selected_site = StringVar()
-
-        site_names = [dd.Name for dd in MangaDownloadersContainer.DownloaderDataList()]
-        self.__size_combo = Combobox(
-            self,
-            textvariable=self.__selected_site,
-            values=site_names,
-            style="Custom.TCombobox",
-            state="readonly"
-        )
-        self.__size_combo.pack(fill=X, padx=10, pady=5)
-
-        self.__size_combo.bind("<<ComboboxSelected>>", lambda e: self.ChangeSite(self.__selected_site.get()))
 
         Label(self, text="Link to main page of manga", **LABEL_STYLE).pack()
 
         self.__linkValue = StringVar()
-
-        self.__savePath = StringVar()
-        self.__savePath.set("download")
-
         self.__linkEntry = Entry(self, **ENTRY_STYLE, textvariable=self.__linkValue)
         self.__linkEntry.pack(fill=X, padx=10, pady=5)
 
         self.__loadManga = Button(self, text="Load Manga", **BTN_STYLE, command=lambda : self.__OnLinkChange())
         self.__loadManga.pack(fill=X, padx=10, pady=5)
 
+        self.__savePath = StringVar()
+        self.__savePath.set("download")
+
         self.__selectPath = Button(self, text="Select path", **BTN_STYLE, command=lambda: self.__choseDirectory())
         self.__selectPath.pack(fill=X, padx=10, pady=5)
 
         self.__chaptersList = ChaptersList(self)
 
-        self.__saveFolder = BooleanVar()
-        self.__saveFolderCheckBox = Checkbutton(self, text="Save to folder", **CHK_STYLE, variable=self.__saveFolder)
-        self.__saveFolderCheckBox.select()
-        self.__saveFolderCheckBox.pack(anchor="w", padx=10, pady=2)
-
-        self.__saveArchive = BooleanVar()
-        self.__saveArchiveCheckBox = Checkbutton(self, text="Save to archive", **CHK_STYLE, variable=self.__saveArchive)
-        self.__saveArchiveCheckBox.pack(anchor="w", padx=10, pady=2)
-
-        self.__savePicture = BooleanVar()
-        self.__savePictureCheckBox = Checkbutton(self, text="Save with pictures", **CHK_STYLE, variable=self.__savePicture)
-        self.__savePictureCheckBox.select()
-        self.__savePictureCheckBox.pack(anchor="w", padx=10, pady=2)
-
-        self.__savePSD = BooleanVar()
-        self.__savePSDCheckBox = Checkbutton(self, text="Save with PSD", **CHK_STYLE, variable=self.__savePSD)
-        self.__savePSDCheckBox.pack(anchor="w", padx=10, pady=2)
-
-        self.__savePDF = BooleanVar()
-        self.__savePDFCheckBox = Checkbutton(self, text="Save PDF", **CHK_STYLE, variable=self.__savePDF)
-        self.__savePDFCheckBox.pack(anchor="w", padx=10, pady=2)
-
-        self.__mergeFrames = BooleanVar()
-        self.__mergeFramesCheckBox = Checkbutton(self, text="Merge frames", **CHK_STYLE, variable=self.__mergeFrames)
-        self.__mergeFramesCheckBox.pack(anchor="w", padx=10, pady=2)
+        self.__downloadOptions: list[DownloadChaptersFrame.DownloadOption] = []
+        downloadOptions = [
+            ("Save to folder", DownloadMode.SAVE_TO_FOLDER, True),
+            ("Save to archive", DownloadMode.SAVE_TO_ARCHIVE, False),
+            ("Save with pictures", DownloadMode.SAVE_PICTURES, True),
+            ("Save PSD", DownloadMode.SAVE_PSD, False),
+            ("Save PDF", DownloadMode.SAVE_PDF, False),
+            ("Merge frames", DownloadMode.MERGE_PICTURES, False)
+        ]
+        for text, command, is_selected in downloadOptions:
+            option = self.DownloadOption(self, text, command)
+            self.__downloadOptions.append(option)
+            option.packTkinterElement(is_selected)
 
         self.__downloadBtn = Button(self, text="Download", **BTN_STYLE, command=lambda: self.__OnDownloadClick())
         self.__downloadBtn.pack(fill=X, padx=10, pady=5)
@@ -128,17 +109,6 @@ class DownloadChaptersFrame(Frame):
         self.__progressBar.pack(fill=X, padx=10, pady=5)
 
         self.__mangaDownloader: IMangaDownloader = None
-
-    def ChangeSite(self, name: str):
-        print(f"Change site to {name}")
-        self.__selected_site.set(name)
-        downloaderData = MangaDownloadersContainer.GetDownloaderDataByName(name)
-        if downloaderData is None:
-            messagebox.showerror("Error", "Invalid site")
-            self.__selected_site.set("")
-
-        downloaderConstructor = downloaderData.DownloaderConstructor
-        self.__mangaDownloader= downloaderConstructor()
 
     def __OnLinkChange(self):
 
@@ -172,23 +142,13 @@ class DownloadChaptersFrame(Frame):
             return
 
         print("Downloading...")
-        link = self.__linkValue.get()
 
+        link = self.__linkValue.get()
         try:
             requests.get(link)
         except:
             print("Aborting...")
             messagebox.showerror("Error", f"Could not download from {link}")
-            return
-
-        if (not self.__saveFolder.get()) and (not self.__saveArchive.get()):
-            print("Aborting...")
-            messagebox.showerror("Error", "Please select a folder or archive saving mode")
-            return
-
-        if (not self.__savePicture.get()) and (not self.__savePSD.get() and (not self.__mergeFrames.get())):
-            print("Aborting...")
-            messagebox.showerror("Error", "Please select a pictures or PSD saving mode")
             return
 
         selectedChapters = self.__chaptersList.SelectedChapters
@@ -199,30 +159,31 @@ class DownloadChaptersFrame(Frame):
 
         download_mode = DownloadMode.NULL
 
-        if self.__savePicture.get():
-            download_mode |= DownloadMode.SAVE_PICTURES
+        for option in self.__downloadOptions:
+            if option.Selected:
+                download_mode |= option.DownloadMode
 
-        if self.__savePSD.get():
-            download_mode |= DownloadMode.SAVE_PSD
+        if not (DownloadMode.SAVE_TO_FOLDER in download_mode or
+                DownloadMode.SAVE_TO_ARCHIVE in download_mode):
+            print("Aborting...")
+            messagebox.showerror("Error", "Please select a folder or archive saving mode")
+            return
 
-        if self.__saveFolder.get():
-            download_mode |= DownloadMode.SAVE_TO_FOLDER
-
-        if self.__saveArchive.get():
-            download_mode |= DownloadMode.SAVE_TO_ARCHIVE
-
-        if self.__savePDF.get():
-            download_mode |= DownloadMode.SAVE_PDF
-
-        if self.__mergeFrames.get():
-            download_mode |= DownloadMode.MERGE_PICTURES
+        if not (DownloadMode.SAVE_PICTURES in download_mode or
+                DownloadMode.SAVE_PSD in download_mode or
+                DownloadMode.SAVE_PDF in download_mode):
+            print("Aborting...")
+            messagebox.showerror("Error", "Please select a pictures or PSD saving mode")
+            return
 
         self.__mangaDownloader.DownloadMode = download_mode
-
         self.__downloadBtn['text'] = "Downloading..."
 
+        download_counter_end = len(selectedChapters)
+
         def on_update():
-            self.__progressBar.step(100 / len(selectedChapters))
+
+            self.__progressBar.step(100.0 / download_counter_end)
 
             if self.__progress.get() == 0:
                 self.__downloadBtn['text'] = "Download"
