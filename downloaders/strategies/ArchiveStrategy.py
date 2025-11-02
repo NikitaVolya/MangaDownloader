@@ -7,12 +7,11 @@ class ArchiveStrategy(DownloadStrategy):
 
         cwd = os.getcwd()
 
-
         try:
             files = os.listdir(path)
             os.chdir(path)
             patoolib.create_archive(
-                f"{cwd}\\{path}.rar",
+                f"{cwd}\\{path}.zip",
                 tuple(files),
             )
         finally:

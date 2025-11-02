@@ -1,4 +1,3 @@
-from numbers import Number
 
 from downloaders.strategies.DownloadStrategy import DownloadStrategy
 
