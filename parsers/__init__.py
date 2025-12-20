@@ -1,3 +1,4 @@
 from parsers.BatoToParser import BatoToParser
 from parsers.XBatoParser import XBatoParser
 from parsers.MangaParserInterface import MangaParserInterface
+from parsers.KaoruHanaWarinToSakuParser import KaoruHanaWarinToSakuParser

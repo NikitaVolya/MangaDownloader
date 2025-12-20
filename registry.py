@@ -1,7 +1,7 @@
 
 from MangaDownloadersContainer import MangaDownloadersContainer
 
-from parsers import BatoToParser, XBatoParser
+from parsers import BatoToParser, XBatoParser, KaoruHanaWarinToSakuParser
 from downloaders.selenium import MangaDexDownloader, HoneyMangaDownloader
 
 MangaDownloadersContainer.RegisterParser(
@@ -26,4 +26,10 @@ MangaDownloadersContainer.RegisterDownloader(
     "HoneyManga",
     "https://honey-manga.com.ua",
     HoneyMangaDownloader
+)
+
+MangaDownloadersContainer.RegisterParser(
+    "Kaoru Hana Wa Rin To Saku Manga Online",
+    "https://kaoruhanawarintosaku.net",
+    KaoruHanaWarinToSakuParser
 )
